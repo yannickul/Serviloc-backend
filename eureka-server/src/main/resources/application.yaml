@@ -1,0 +1,84 @@
+# =============================================================================
+# ServiLoc — Eureka Server — Configuration
+# Port    : 8761
+# Rôle    : Registre centralisé de service discovery
+# =============================================================================
+
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+# =============================================================================
+# Eureka Server — Configuration
+# Ce service est le serveur Eureka, il ne s'enregistre PAS lui-même.
+# =============================================================================
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+    # En Docker, utilise l'IP du conteneur plutôt que le hostname
+    prefer-ip-address: false
+
+  client:
+    # Le serveur Eureka ne s'enregistre pas auprès de lui-même
+    register-with-eureka: false
+    # Le serveur Eureka ne récupère pas le registre depuis un autre serveur
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+  server:
+    # Pas de délai d'attente au démarrage (mode dev — désactiver en prod)
+    wait-time-in-ms-when-sync-empty: 0
+    # Intervalle de renouvellement du registre (en secondes)
+    renewal-threshold-update-interval-ms: 15000
+    # Temps d'expiration des instances sans heartbeat (en secondes)
+    eviction-interval-timer-in-ms: 10000
+    # En mode dev, désactiver le "self-preservation" pour éviter les faux positifs
+    # ATTENTION : remettre à true en production
+    enable-self-preservation: false
+
+# =============================================================================
+# Actuator — Healthcheck exposé pour Docker Compose
+# Docker Compose utilise GET /actuator/health pour le condition: service_healthy
+# =============================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        # N'exposer que health et info — Eureka n'a pas besoin de plus
+        include: "health,info"
+      base-path: /actuator
+  endpoint:
+    health:
+      # "always" pour que le healthcheck Docker voie le détail du statut
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+# =============================================================================
+# Info — Métadonnées affichées sur /actuator/info
+# =============================================================================
+info:
+  app:
+    name: ServiLoc Eureka Server
+    description: Service Discovery Registry for ServiLoc microservices
+    version: 1.0.0
+  environment:
+    note: "Démarre en PREMIER avant tous les autres services"
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level:
+    com.netflix.eureka: WARN
+    com.netflix.discovery: WARN
+    org.springframework.cloud: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

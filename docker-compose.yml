@@ -1,0 +1,402 @@
+# =============================================================================
+# ServiLoc — Docker Compose — Développement local
+# =============================================================================
+#
+# Ordre de démarrage :
+#   1. eureka-server        (healthcheck sur /actuator/health)
+#   2. rabbitmq             (healthcheck via rabbitmq-diagnostics)
+#   3. redis
+#   4. 8x PostgreSQL        (db_utilisateurs à db_media)
+#   5. minio
+#   6. [Microservices — démarrés séparément via leurs propres commandes]
+#
+# Usage :
+#   docker compose up -d                    # Démarre toute l'infra
+#   docker compose up -d eureka-server      # Démarre uniquement Eureka
+#   docker compose logs -f eureka-server    # Logs en temps réel
+#   docker compose ps                       # Statut de tous les services
+#   docker compose down -v                  # Arrête et supprime les volumes
+#
+# Pré-requis : fichier .env à la racine (voir .env.example)
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # 1. EUREKA SERVER — Service Discovery
+  # Démarre EN PREMIER. Tous les microservices en dépendent.
+  # Dashboard : http://localhost:8761
+  # Health    : http://localhost:8761/actuator/health
+  # ===========================================================================
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    image: serviloc/eureka-server:latest
+    container_name: serviloc-eureka
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_HOSTNAME: eureka-server
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:8761/actuator/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 2. RABBITMQ — Message Broker
+  # Exchange : serviloc.events (topic)
+  # Management UI : http://localhost:15672 (admin / admin123)
+  # AMQP port     : 5672
+  # ===========================================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: serviloc-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 3. REDIS — Cache & Rate Limiting
+  # Port : 6379
+  # Utilisé par : API Gateway (rate limiting), Service Catégories (cache TTL),
+  #               Service Missions (fallback prestataires Resilience4j)
+  # ===========================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: serviloc-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4a. PostgreSQL — Service Utilisateurs
+  # Port hôte : 5441 | Port conteneur : 5432
+  # ===========================================================================
+  db-utilisateurs:
+    image: postgres:16-alpine
+    container_name: serviloc-db-utilisateurs
+    ports:
+      - "5441:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_USER_DB}
+      POSTGRES_USER: ${POSTGRES_USER_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_USER_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_utilisateurs_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER_USER} -d ${POSTGRES_USER_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4b. PostgreSQL — Service Missions
+  # Port hôte : 5442 | Port conteneur : 5432
+  # ===========================================================================
+  db-missions:
+    image: postgres:16-alpine
+    container_name: serviloc-db-missions
+    ports:
+      - "5442:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_MISSIONS_DB}
+      POSTGRES_USER: ${POSTGRES_MISSIONS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_MISSIONS_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_missions_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_MISSIONS_USER} -d ${POSTGRES_MISSIONS_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4c. PostgreSQL — Service Négociations
+  # Port hôte : 5443 | Port conteneur : 5432
+  # ===========================================================================
+  db-negociations:
+    image: postgres:16-alpine
+    container_name: serviloc-db-negociations
+    ports:
+      - "5443:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_NEGO_DB}
+      POSTGRES_USER: ${POSTGRES_NEGO_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_NEGO_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_negociations_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_NEGO_USER} -d ${POSTGRES_NEGO_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4d. PostgreSQL — Service Paiement
+  # Port hôte : 5444 | Port conteneur : 5432
+  # ===========================================================================
+  db-paiement:
+    image: postgres:16-alpine
+    container_name: serviloc-db-paiement
+    ports:
+      - "5444:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_PAIEMENT_DB}
+      POSTGRES_USER: ${POSTGRES_PAIEMENT_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PAIEMENT_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_paiement_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_PAIEMENT_USER} -d ${POSTGRES_PAIEMENT_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4e. PostgreSQL — Service Litiges
+  # Port hôte : 5445 | Port conteneur : 5432
+  # ===========================================================================
+  db-litiges:
+    image: postgres:16-alpine
+    container_name: serviloc-db-litiges
+    ports:
+      - "5445:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_LITIGES_DB}
+      POSTGRES_USER: ${POSTGRES_LITIGES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_LITIGES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_litiges_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_LITIGES_USER} -d ${POSTGRES_LITIGES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4f. PostgreSQL — Service Notifications
+  # Port hôte : 5446 | Port conteneur : 5432
+  # ===========================================================================
+  db-notifications:
+    image: postgres:16-alpine
+    container_name: serviloc-db-notifications
+    ports:
+      - "5446:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_NOTIFS_DB}
+      POSTGRES_USER: ${POSTGRES_NOTIFS_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_NOTIFS_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_notifications_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_NOTIFS_USER} -d ${POSTGRES_NOTIFS_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4g. PostgreSQL — Service Catégories
+  # Port hôte : 5447 | Port conteneur : 5432
+  # ===========================================================================
+  db-categories:
+    image: postgres:16-alpine
+    container_name: serviloc-db-categories
+    ports:
+      - "5447:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_CATEGORIES_DB}
+      POSTGRES_USER: ${POSTGRES_CATEGORIES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_CATEGORIES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_categories_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_CATEGORIES_USER} -d ${POSTGRES_CATEGORIES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 4h. PostgreSQL — Service Fichiers (Media)
+  # Port hôte : 5448 | Port conteneur : 5432
+  # ===========================================================================
+  db-media:
+    image: postgres:16-alpine
+    container_name: serviloc-db-media
+    ports:
+      - "5448:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_MEDIA_DB}
+      POSTGRES_USER: ${POSTGRES_MEDIA_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_MEDIA_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_media_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_MEDIA_USER} -d ${POSTGRES_MEDIA_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 5. MINIO — Stockage objet compatible S3
+  # API    : http://localhost:9000
+  # Console: http://localhost:9001 (minioadmin / minioadmin123)
+  # Bucket : serviloc-media (créé automatiquement par init-minio)
+  # ===========================================================================
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    container_name: serviloc-minio
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console Web
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "--silent", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - serviloc-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 5b. MINIO INIT — Crée le bucket serviloc-media au démarrage
+  # Ce service s'exécute une seule fois et s'arrête (oneshot)
+  # ===========================================================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: serviloc-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+        mc mb --ignore-existing local/$${MINIO_BUCKET};
+        mc anonymous set download local/$${MINIO_BUCKET};
+        echo 'Bucket $${MINIO_BUCKET} ready.';
+      "
+    networks:
+      - serviloc-network
+    restart: "no"
+
+# =============================================================================
+# VOLUMES — Persistance des données
+# =============================================================================
+volumes:
+  rabbitmq_data:
+    name: serviloc_rabbitmq_data
+  redis_data:
+    name: serviloc_redis_data
+  db_utilisateurs_data:
+    name: serviloc_db_utilisateurs
+  db_missions_data:
+    name: serviloc_db_missions
+  db_negociations_data:
+    name: serviloc_db_negociations
+  db_paiement_data:
+    name: serviloc_db_paiement
+  db_litiges_data:
+    name: serviloc_db_litiges
+  db_notifications_data:
+    name: serviloc_db_notifications
+  db_categories_data:
+    name: serviloc_db_categories
+  db_media_data:
+    name: serviloc_db_media
+  minio_data:
+    name: serviloc_minio_data
+
+# =============================================================================
+# RÉSEAU — Réseau bridge interne partagé par tous les conteneurs
+# Les microservices (démarrés hors compose) doivent rejoindre ce réseau :
+#   docker network connect serviloc-network <conteneur>
+# =============================================================================
+networks:
+  serviloc-network:
+    name: serviloc-network
+    driver: bridge

@@ -1,0 +1,225 @@
+{
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "exchanges": [
+    {
+      "name": "serviloc.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "serviloc.events.dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "payment.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "serviloc.events.dlx",
+        "x-dead-letter-routing-key": "payment.dlq",
+        "x-message-ttl": 3600000,
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "payment.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "missions.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "serviloc.events.dlx",
+        "x-dead-letter-routing-key": "missions.dlq",
+        "x-message-ttl": 3600000,
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "missions.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "negotiations.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "serviloc.events.dlx",
+        "x-dead-letter-routing-key": "negotiations.dlq",
+        "x-message-ttl": 3600000,
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "negotiations.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "notifications.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "serviloc.events.dlx",
+        "x-dead-letter-routing-key": "notifications.dlq",
+        "x-message-ttl": 3600000,
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "notifications.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "payment.queue",
+      "destination_type": "queue",
+      "routing_key": "negotiation.quote.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "payment.queue",
+      "destination_type": "queue",
+      "routing_key": "mission.completed",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "missions.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "negotiations.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.failed",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "user.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "provider.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "negotiation.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "mission.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "litige.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "notifications.queue",
+      "destination_type": "queue",
+      "routing_key": "demand.*",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events.dlx",
+      "vhost": "/",
+      "destination": "payment.dlq",
+      "destination_type": "queue",
+      "routing_key": "payment.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events.dlx",
+      "vhost": "/",
+      "destination": "missions.dlq",
+      "destination_type": "queue",
+      "routing_key": "missions.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events.dlx",
+      "vhost": "/",
+      "destination": "negotiations.dlq",
+      "destination_type": "queue",
+      "routing_key": "negotiations.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events.dlx",
+      "vhost": "/",
+      "destination": "notifications.dlq",
+      "destination_type": "queue",
+      "routing_key": "notifications.dlq",
+      "arguments": {}
+    }
+  ]
+}
