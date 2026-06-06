@@ -27,4 +27,3 @@ ServiLoc est une plateforme backend basée sur une architecture microservices Sp
 - Docker & Docker Compose
 - Git
 - curl (pour les tests)
-

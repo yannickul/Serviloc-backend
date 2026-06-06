@@ -24,6 +24,25 @@
   ],
   "queues": [
     {
+      "name": "categories.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "serviloc.events.dlx",
+        "x-dead-letter-routing-key": "categories.dlq",
+        "x-message-ttl": 3600000,
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "categories.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
       "name": "payment.queue",
       "vhost": "/",
       "durable": true,
@@ -104,6 +123,22 @@
     {
       "source": "serviloc.events",
       "vhost": "/",
+      "destination": "categories.queue",
+      "destination_type": "queue",
+      "routing_key": "demand.published",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events.dlx",
+      "vhost": "/",
+      "destination": "categories.dlq",
+      "destination_type": "queue",
+      "routing_key": "categories.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
       "destination": "payment.queue",
       "destination_type": "queue",
       "routing_key": "negotiation.quote.*",
@@ -122,7 +157,15 @@
       "vhost": "/",
       "destination": "missions.queue",
       "destination_type": "queue",
-      "routing_key": "payment.*",
+      "routing_key": "payment.confirmed",
+      "arguments": {}
+    },
+    {
+      "source": "serviloc.events",
+      "vhost": "/",
+      "destination": "missions.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.failed",
       "arguments": {}
     },
     {
