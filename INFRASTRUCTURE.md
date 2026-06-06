@@ -19,10 +19,10 @@ cp .env.example .env
 
 Si vous ne changez rien, gardez au moins les valeurs admin123 pour RabbitMQ et redis123 pour Redis – mais changez‑les en production.
 ## 3. Lancer toute l’infrastructure
-bash
+```bash
 
 docker compose up -d
-
+```
 Cette commande démarre :
 
     Eureka Server (port 8761)
@@ -44,14 +44,16 @@ docker compose ps
 ```
 Vous devez voir tous les services avec un statut healthy (sauf peut‑être eureka-server si le healthcheck échoue – voir section 5).
 ## 4.2. Tests spécifiques
-Service	Commande / URL	Résultat attendu
-Eureka	curl http://localhost:8761/actuator/health	{"status":"UP"}
-Eureka Dashboard	http://localhost:8761	Interface web visible
-RabbitMQ API	curl -u admin:admin123 http://localhost:15672/api/exchanges/%2F	Liste des exchanges, dont serviloc.events
-RabbitMQ UI	http://localhost:15672 (admin / admin123)	Interface de gestion
-Redis	docker exec serviloc-redis redis-cli -a redis123 ping	PONG
-MinIO health	curl http://localhost:9000/minio/health/live	200 OK (corps vide)
-MinIO Console	http://localhost:9001 (minioadmin / mot de passe du .env)	Interface web
+
+| Service | Commande / URL | Résultat attendu |
+| :--- | :--- | :--- |
+| **Eureka** | `curl http://localhost:8761/actuator/health` | `{"status":"UP"}` |
+| **Eureka Dashboard** | http://localhost:8761 | Interface web visible |
+| **RabbitMQ API** | `curl -u admin:admin123 http://localhost:15672/api/exchanges/%2F` | Liste des exchanges, dont `serviloc.events` |
+| **RabbitMQ UI** | http://localhost:15672 *(admin / admin123)* | Interface de gestion |
+| **Redis** | `docker exec serviloc-redis redis-cli -a redis123 ping` | `PONG` |
+| **MinIO health** | `curl http://localhost:9000/minio/health/live` | 200 OK (corps vide) |
+| **MinIO Console** | http://localhost:9001 *(minioadmin / mot de passe du .env)* | Interface web |
 ## 4.3. Accès aux bases de données (exemple pour utilisateurs)
 ```bash
 
