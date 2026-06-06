@@ -25,6 +25,10 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
+# Installer curl (nécessite root)
+USER root
+RUN apk add --no-cache curl
+
 # Sécurité : exécuter avec un utilisateur non-root
 RUN addgroup -S serviloc && adduser -S serviloc -G serviloc
 USER serviloc
