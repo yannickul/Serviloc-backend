@@ -17,7 +17,7 @@ cp .env.example .env
 ```
 Éditez le fichier .env pour définir des mots de passe sécurisés (au minimum RABBITMQ_DEFAULT_PASS, REDIS_PASSWORD, MINIO_ROOT_PASSWORD).
 
-Si vous ne changez rien, gardez au moins les valeurs admin123 pour RabbitMQ et redis123 pour Redis – mais changez‑les en production.
+Si vous ne changez rien, gardez au moins les valeurs dans le fichier .env pour RabbitMQ et le meme pour Redis .
 ## 3. Lancer toute l’infrastructure
 ```bash
 

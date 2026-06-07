@@ -1,0 +1,173 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+
+      routes:
+
+        # ── Service Utilisateurs (port 8081) ──────────────────────
+        - id: utilisateurs-auth
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/auth/**
+          filters:
+            - StripPrefix=1
+
+        - id: utilisateurs-client
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/client/me
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: utilisateurs-provider
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/provider/me, /v1/provider/profile, /v1/provider/availability, /v1/provider/schedule
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: utilisateurs-admin
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/admin/users/**, /v1/admin/providers/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Service Missions (port 8082) ──────────────────────────
+        - id: missions-client
+          uri: lb://service-missions
+          predicates:
+            - Path=/v1/client/demands/**, /v1/client/missions/**, /v1/client/providers/search, /v1/client/dashboard
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: missions-provider
+          uri: lb://service-missions
+          predicates:
+            - Path=/v1/provider/demands/**, /v1/provider/missions/**, /v1/provider/dashboard, /v1/provider/earnings
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: missions-admin
+          uri: lb://service-missions
+          predicates:
+            - Path=/v1/admin/dashboard, /v1/admin/stats, /v1/admin/transactions/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Service Négociations (port 8083) ──────────────────────
+        - id: negociations-client
+          uri: lb://service-negociations
+          predicates:
+            - Path=/v1/client/conversations/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: negociations-provider
+          uri: lb://service-negociations
+          predicates:
+            - Path=/v1/provider/conversations/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: negociations-admin-chat
+          uri: lb://service-negociations
+          predicates:
+            - Path=/v1/admin/litiges/*/chat
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Service Litiges (port 8084) ───────────────────────────
+        - id: litiges-admin
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/admin/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Service Catégories (port 8085) ────────────────────────
+        - id: categories-client
+          uri: lb://service-categories
+          predicates:
+            - Path=/v1/client/categories
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        - id: categories-admin
+          uri: lb://service-categories
+          predicates:
+            - Path=/v1/admin/categories/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Service Fichiers (port 8086) ──────────────────────────
+        - id: fichiers-uploads
+          uri: lb://service-fichiers
+          predicates:
+            - Path=/v1/uploads/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: serviloc
+
+rate-limiting:
+  replenish-rate: 10
+  burst-capacity: 20
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,gateway"
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.serviloc.gateway: DEBUG
