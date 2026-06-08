@@ -1,0 +1,76 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: service-categories
+  profiles:
+    active: local
+
+  datasource:
+    url: jdbc:postgresql://db-categories:5432/${POSTGRES_CATEGORIES_DB}
+    username: ${POSTGRES_CATEGORIES_USER}
+    password: ${POSTGRES_CATEGORIES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update   # ✅ crée/maj les tables automatiquement
+    show-sql: true       # ✅ affiche les requêtes SQL
+    defer-datasource-initialization: true  # ✅ exécute data.sql après Hibernate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data.sql
+      continue-on-error: true
+
+  redis:
+    host: redis
+    port: 6379
+    password: ${REDIS_PASSWORD}
+    timeout: 20000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+rabbitmq:
+  host: rabbitmq
+  port: 5672
+  username: ${RABBITMQ_DEFAULT_USER}
+  password: ${RABBITMQ_DEFAULT_PASS}
+  virtual-host: ${RABBITMQ_VHOST}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+jwt:
+  secret: ${JWT_SECRET}
+  public-key: ${JWT_PUBLIC_KEY}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
