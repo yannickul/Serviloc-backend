@@ -4,7 +4,7 @@ import com.serviloc.utilisateurs.domain.exception.EmailAlreadyExistsException;
 import com.serviloc.utilisateurs.domain.exception.InvalidOtpException;
 import com.serviloc.utilisateurs.domain.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.validation.FieldError;
@@ -19,56 +19,75 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // ─── Format d'erreur unifié ───────────────────────────────────
+
+    record ErrorDetail(String code, String message, String field) {}
+    record ErrorResponse(boolean success, ErrorDetail error) {}
+
+    // ─── Handlers ─────────────────────────────────────────────────
+
     @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ProblemDetail handleEmailExists(EmailAlreadyExistsException ex) {
-        return problem(HttpStatus.CONFLICT, ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleEmailExists(EmailAlreadyExistsException ex) {
+        return error(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", ex.getMessage(), "email");
     }
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ProblemDetail handleNotFound(UserNotFoundException ex) {
-        return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleNotFound(UserNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", ex.getMessage(), null);
     }
 
     @ExceptionHandler(InvalidOtpException.class)
-    public ProblemDetail handleInvalidOtp(InvalidOtpException ex) {
-        return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleInvalidOtp(InvalidOtpException ex) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_OTP", ex.getMessage(), "code");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ProblemDetail handleBadCredentials(BadCredentialsException ex) {
-        return problem(HttpStatus.UNAUTHORIZED, "Email ou mot de passe incorrect");
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        return error(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
+                "Email ou mot de passe incorrect", null);
     }
 
     @ExceptionHandler(DisabledException.class)
-    public ProblemDetail handleDisabled(DisabledException ex) {
-        return problem(HttpStatus.FORBIDDEN, "Compte non activé. Vérifiez votre OTP.");
+    public ResponseEntity<ErrorResponse> handleDisabled(DisabledException ex) {
+        return error(HttpStatus.FORBIDDEN, "ACCOUNT_NOT_ACTIVATED",
+                "Compte non activé. Vérifiez votre OTP.", null);
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ProblemDetail handleIllegalState(IllegalStateException ex) {
-        return problem(HttpStatus.CONFLICT, ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+        return error(HttpStatus.CONFLICT, "INVALID_STATE", ex.getMessage(), null);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ProblemDetail handleIllegalArg(IllegalArgumentException ex) {
-        return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleIllegalArg(IllegalArgumentException ex) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", ex.getMessage(), null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = ex.getBindingResult().getFieldErrors().stream()
-                .collect(Collectors.toMap(
-                        FieldError::getField,
-                        f -> f.getDefaultMessage() != null ? f.getDefaultMessage() : "invalide"
-                ));
-        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, "Validation échouée");
-        pd.setProperty("errors", errors);
-        return pd;
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        // On retourne le premier champ en erreur
+        FieldError first = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst().orElse(null);
+
+        String field   = first != null ? first.getField() : null;
+        String message = first != null && first.getDefaultMessage() != null
+                ? first.getDefaultMessage()
+                : "Validation échouée";
+
+        return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message, field);
     }
 
-    private ProblemDetail problem(HttpStatus status, String detail) {
-        ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
-        pd.setProperty("timestamp", LocalDateTime.now().toString());
-        return pd;
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
+                "Une erreur interne est survenue", null);
+    }
+
+    // ─── Helper ───────────────────────────────────────────────────
+
+    private ResponseEntity<ErrorResponse> error(HttpStatus status, String code,
+                                                String message, String field) {
+        return ResponseEntity.status(status)
+                .body(new ErrorResponse(false, new ErrorDetail(code, message, field)));
     }
 }

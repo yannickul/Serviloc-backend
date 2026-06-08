@@ -21,14 +21,15 @@ public class UserRepositoryAdapter implements UserRepository {
     public User save(User user) {
         UserJpaEntity entity = new UserJpaEntity(
                 user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
                 user.getEmail(),
                 user.getPassword(),
                 user.getPhone(),
                 user.getRole(),
-                user.isActive()
+                user.getStatus()
         );
-        UserJpaEntity saved = jpa.save(entity);
-        return toDomain(saved);
+        return toDomain(jpa.save(entity));
     }
 
     @Override
@@ -50,13 +51,16 @@ public class UserRepositoryAdapter implements UserRepository {
         try {
             var ctor = User.class.getDeclaredConstructor(
                     UUID.class, String.class, String.class, String.class,
-                    UserRole.class, boolean.class,
+                    String.class, String.class, UserRole.class,
+                    User.Status.class,
                     java.time.LocalDateTime.class, java.time.LocalDateTime.class
             );
             ctor.setAccessible(true);
             return ctor.newInstance(
-                    e.getId(), e.getEmail(), e.getPassword(), e.getPhone(),
-                    e.getRole(), e.isActive(), e.getCreatedAt(), e.getUpdatedAt()
+                    e.getId(), e.getFirstName(), e.getLastName(),
+                    e.getEmail(), e.getPassword(), e.getPhone(),
+                    e.getRole(), e.getStatus(),
+                    e.getCreatedAt(), e.getUpdatedAt()
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution User", ex);

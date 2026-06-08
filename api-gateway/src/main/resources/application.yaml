@@ -140,7 +140,50 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+        # ── Agent — Providers (instruit dossiers prestataires) ────
+        - id: agent-providers
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/agent/providers/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
 
+        # ── Agent — Litiges ───────────────────────────────────────
+        - id: agent-litiges
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/agent/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Client — Litiges (résolution) ─────────────────────────
+        - id: client-litiges
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/client/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Provider — Litiges (résolution) ───────────────────────
+        - id: provider-litiges
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/provider/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+
+        # ── Admin — Agents ────────────────────────────────────────
+        - id: admin-agents
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/admin/agents/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
 eureka:
   client:
     service-url:

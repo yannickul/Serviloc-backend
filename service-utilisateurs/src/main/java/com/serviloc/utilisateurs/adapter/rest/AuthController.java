@@ -22,45 +22,45 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Inscription d'un nouvel utilisateur")
-    public ResponseEntity<RegisterResponse> register(
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(authService.register(request));
+                .body(ApiResponse.ok(authService.register(request)));
     }
 
     @PostMapping("/verify-otp")
     @Operation(summary = "Vérification de l'OTP et activation du compte")
-    public ResponseEntity<VerifyOtpResponse> verifyOtp(
+    public ResponseEntity<ApiResponse<VerifyOtpResponse>> verifyOtp(
             @Valid @RequestBody VerifyOtpRequest request) {
-        return ResponseEntity.ok(authService.verifyOtp(request));
+        return ResponseEntity.ok(ApiResponse.ok(authService.verifyOtp(request)));
     }
 
     @PostMapping("/resend-otp")
     @Operation(summary = "Renvoi d'un nouvel OTP")
-    public ResponseEntity<VerifyOtpResponse> resendOtp(
+    public ResponseEntity<ApiResponse<VerifyOtpResponse>> resendOtp(
             @Valid @RequestBody ResendOtpRequest request) {
-        return ResponseEntity.ok(authService.resendOtp(request));
+        return ResponseEntity.ok(ApiResponse.ok(authService.resendOtp(request)));
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Connexion — retourne access token + refresh token")
-    public ResponseEntity<AuthResponse> login(
+    @Operation(summary = "Connexion — retourne access token + refresh token + profil")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
     }
 
     @PostMapping("/refresh")
     @Operation(summary = "Renouvellement du token d'accès")
-    public ResponseEntity<AuthResponse> refresh(
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(
             @Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request));
+        return ResponseEntity.ok(ApiResponse.ok(authService.refresh(request)));
     }
 
     @PostMapping("/logout")
     @Operation(summary = "Déconnexion — invalide le refresh token")
-    public ResponseEntity<MessageResponse> logout(
+    public ResponseEntity<ApiResponse<MessageResponse>> logout(
             @Valid @RequestBody LogoutRequest request) {
         authService.logout(request.refreshToken());
-        return ResponseEntity.ok(new MessageResponse("Déconnexion réussie"));
+        return ResponseEntity.ok(ApiResponse.ok(new MessageResponse("Déconnexion réussie")));
     }
 }

@@ -1,5 +1,6 @@
 package com.serviloc.utilisateurs.infrastructure.persistence;
 
+import com.serviloc.utilisateurs.domain.model.User;
 import com.serviloc.utilisateurs.domain.model.UserRole;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -21,6 +22,12 @@ public class UserJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false, length = 100)
+    private String lastName;
+
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
@@ -34,8 +41,9 @@ public class UserJpaEntity {
     @Column(nullable = false, length = 20)
     private UserRole role;
 
-    @Column(nullable = false)
-    private boolean active = false;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private User.Status status = User.Status.PENDING;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -47,23 +55,29 @@ public class UserJpaEntity {
 
     protected UserJpaEntity() {}
 
-    public UserJpaEntity(UUID id, String email, String password,
-                         String phone, UserRole role, boolean active) {
+    public UserJpaEntity(UUID id, String firstName, String lastName,
+                         String email, String password, String phone,
+                         UserRole role, User.Status status) {
         this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.email = email;
         this.password = password;
         this.phone = phone;
         this.role = role;
-        this.active = active;
+        this.status = status;
     }
 
-    public UUID getId()                 { return id; }
-    public String getEmail()            { return email; }
-    public String getPassword()         { return password; }
-    public String getPhone()            { return phone; }
-    public UserRole getRole()           { return role; }
-    public boolean isActive()           { return active; }
-    public void setActive(boolean a)    { this.active = a; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public UUID getId()                   { return id; }
+    public String getFirstName()          { return firstName; }
+    public String getLastName()           { return lastName; }
+    public String getEmail()              { return email; }
+    public String getPassword()           { return password; }
+    public String getPhone()              { return phone; }
+    public UserRole getRole()             { return role; }
+    public User.Status getStatus()        { return status; }
+    public void setStatus(User.Status s)  { this.status = s; }
+    public LocalDateTime getCreatedAt()   { return createdAt; }
+    public LocalDateTime getUpdatedAt()   { return updatedAt; }
 }

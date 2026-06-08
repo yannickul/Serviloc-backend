@@ -1,6 +1,7 @@
 package com.serviloc.utilisateurs.application.service;
 
 import com.serviloc.utilisateurs.application.dto.AuthDtos.*;
+import com.serviloc.utilisateurs.application.dto.UserResponseMapper;
 import com.serviloc.utilisateurs.domain.exception.EmailAlreadyExistsException;
 import com.serviloc.utilisateurs.domain.exception.InvalidOtpException;
 import com.serviloc.utilisateurs.domain.exception.UserNotFoundException;
@@ -64,10 +65,12 @@ public class AuthService {
         }
 
         User user = User.create(
+                request.firstName(),
+                request.lastName(),
                 request.email(),
                 passwordEncoder.encode(request.password()),
                 request.phone(),
-                UserRole.valueOf(request.role())
+                UserRole.valueOf(request.role().toUpperCase())
         );
         User saved = userRepository.save(user);
 
@@ -78,7 +81,6 @@ public class AuthService {
 
         log.info("[AUTH] Inscription : userId={} email={}", saved.getId(), saved.getEmail());
 
-        // Event RabbitMQ
         eventPublisher.publishUserRegistered(
                 saved.getId(), saved.getEmail(), saved.getRole().name());
 
@@ -154,9 +156,14 @@ public class AuthService {
         refreshTokenRepository.save(rt);
 
         log.info("[AUTH] Login réussi : userId={}", user.getId());
+
         return new AuthResponse(
-                accessToken, refreshToken, "Bearer",
-                jwtService.getAccessTokenExpiration(), user.getRole().name()
+                accessToken,
+                refreshToken,
+                "Bearer",
+                jwtService.getAccessTokenExpiration(),
+                user.getRole().name().toLowerCase(),
+                UserResponseMapper.toUserResponse(user)   // ← user complet dans la réponse
         );
     }
 
@@ -174,11 +181,16 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String newAccessToken = jwtService.generateAccessToken(userDetails, user.getRole().name());
+        String newAccessToken = jwtService.generateAccessToken(
+                userDetails, user.getRole().name());
 
         return new AuthResponse(
-                newAccessToken, request.refreshToken(), "Bearer",
-                jwtService.getAccessTokenExpiration(), user.getRole().name()
+                newAccessToken,
+                request.refreshToken(),
+                "Bearer",
+                jwtService.getAccessTokenExpiration(),
+                user.getRole().name().toLowerCase(),
+                UserResponseMapper.toUserResponse(user)
         );
     }
 
