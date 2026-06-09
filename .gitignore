@@ -92,3 +92,6 @@ spring.log
 *.tmp
 *.swp
 *.bak
+# Fichiers de config locaux avec secrets
+**/application-local.yml
+**/application-local.properties
