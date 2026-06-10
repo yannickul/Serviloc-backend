@@ -6,6 +6,7 @@ import com.serviloc.categories.domain.exception.CategoryNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class CategoryRepositoryAdapter implements CategoryRepository {
@@ -19,15 +20,13 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     @Override
     public List<ServiceCategory> findAll() {
         return repo.findAll().stream()
-                   .map(this::toDomain)
-                   .toList();
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
-    public ServiceCategory findById(Long id) {
-        return repo.findById(id)
-                   .map(this::toDomain)
-                   .orElseThrow(() -> new CategoryNotFoundException(id));
+    public Optional<ServiceCategory> findBySlug(String slug) {
+        return repo.findBySlug(slug).map(this::toDomain);
     }
 
     @Override
@@ -42,22 +41,29 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         repo.deleteById(id);
     }
 
+    /** Conversion JPA → Domaine */
     private ServiceCategory toDomain(CategoryJpaEntity e) {
-        return new ServiceCategory(
-                e.getId(), e.getLabel(), e.getIconKey(), e.getColor(),
-                e.getDemandCount(), e.getPercentageShare()
+        return ServiceCategory.reconstitute(
+                e.getId(),          // interne
+                e.getSlug(),        // identifiant public
+                e.getLabel(),
+                e.getIconKey(),
+                e.getColor(),
+                e.getDemandCount(),
+                e.getPercentageShare()
         );
     }
 
+    /** Conversion Domaine → JPA */
     private CategoryJpaEntity toEntity(ServiceCategory c) {
         CategoryJpaEntity e = new CategoryJpaEntity();
-        e.setId(c.id());
-        e.setLabel(c.label());
-        e.setIconKey(c.iconKey());
-        e.setColor(c.color());
-        e.setDemandCount(c.demandCount());
-        e.setPercentageShare(c.percentageShare());
+        e.setId(c.getId());          // interne
+        e.setSlug(c.getSlug());      // exposé comme "id" côté API
+        e.setLabel(c.getLabel());
+        e.setIconKey(c.getIconKey());
+        e.setColor(c.getColor());
+        e.setDemandCount(c.getDemandCount());
+        e.setPercentageShare(c.getPercentageShare());
         return e;
     }
 }
-

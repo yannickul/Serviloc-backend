@@ -1,28 +1,28 @@
 server:
-  port: 8087
+  port: ${SERVER_PORT:8087}   # valeur par défaut 8087
 
 spring:
   application:
     name: service-categories
   profiles:
-    active: local
+    active: ${SPRING_PROFILE:local}
 
   datasource:
-    url: jdbc:postgresql://db-categories:5432/${POSTGRES_CATEGORIES_DB}
+    url: jdbc:postgresql://${POSTGRES_HOST:db-categories}:${POSTGRES_PORT:5432}/${POSTGRES_CATEGORIES_DB}
     username: ${POSTGRES_CATEGORIES_USER}
     password: ${POSTGRES_CATEGORIES_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 30000
-      connection-timeout: 20000
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      idle-timeout: ${DB_IDLE_TIMEOUT:30000}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
 
   jpa:
     hibernate:
-      ddl-auto: update   # ✅ crée/maj les tables automatiquement
-    show-sql: true       # ✅ affiche les requêtes SQL
-    defer-datasource-initialization: true  # ✅ exécute data.sql après Hibernate
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
+    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
@@ -30,31 +30,31 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: ${SQL_INIT_MODE:always}
       data-locations: classpath:data.sql
       continue-on-error: true
 
   redis:
-    host: redis
-    port: 6379
+    host: ${REDIS_HOST:redis}
+    port: ${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD}
-    timeout: 20000
+    timeout: ${REDIS_TIMEOUT:20000}
 
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
+      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}
+    register-with-eureka: ${EUREKA_REGISTER:true}
+    fetch-registry: ${EUREKA_FETCH:true}
   instance:
     prefer-ip-address: true
 
 rabbitmq:
-  host: rabbitmq
-  port: 5672
+  host: ${RABBITMQ_HOST:rabbitmq}
+  port: ${RABBITMQ_PORT:5672}
   username: ${RABBITMQ_DEFAULT_USER}
   password: ${RABBITMQ_DEFAULT_PASS}
-  virtual-host: ${RABBITMQ_VHOST}
+  virtual-host: ${RABBITMQ_VHOST:/}
 
 management:
   endpoints:
@@ -71,6 +71,5 @@ jwt:
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-
+    org.hibernate.SQL: ${LOG_SQL_LEVEL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_BINDER_LEVEL:TRACE}

@@ -1,8 +1,19 @@
 HELP.md
+
+# --- Maven ---
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# --- Spring Boot configuration ---
+application.yaml
+application.yml
+application.properties
+
+# Garder un modèle pour guider les devs
+!application-example.yaml
+!application-template.yaml
 
 ### STS ###
 .apt_generated
@@ -31,3 +42,23 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# --- Logs ---
+*.log
+logs/
+*.out
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Docker ---
+docker-compose.override.yml
+.env
+
+# --- Test reports ---
+surefire-reports/
+test-output/
+
+# --- Gradle ---
+.gradle/

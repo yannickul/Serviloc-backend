@@ -3,23 +3,31 @@ package com.serviloc.categories.infrastructure.persistence;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "category_jpa_entity")
+@Table(name = "service_category") // nom de table plus cohérent
 public class CategoryJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;   // interne, clé primaire
 
+    @Column(nullable = false, unique = true)
+    private String slug;   // identifiant public exposé comme "id" dans l’API
+
+    @Column(nullable = false)
     private String label;
+
     private String iconKey;
     private String color;
+
     private Integer demandCount;
     private Double percentageShare;
 
-    // ✅ Constructeurs
+    // Constructeurs
     public CategoryJpaEntity() {}
 
-    public CategoryJpaEntity(String label, String iconKey, String color, Integer demandCount, Double percentageShare) {
+    public CategoryJpaEntity(String slug, String label, String iconKey,
+                             String color, Integer demandCount, Double percentageShare) {
+        this.slug = slug;
         this.label = label;
         this.iconKey = iconKey;
         this.color = color;
@@ -27,9 +35,12 @@ public class CategoryJpaEntity {
         this.percentageShare = percentageShare;
     }
 
-    // ✅ Getters / Setters
+    // Getters / Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
 
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = label; }
@@ -46,4 +57,3 @@ public class CategoryJpaEntity {
     public Double getPercentageShare() { return percentageShare; }
     public void setPercentageShare(Double percentageShare) { this.percentageShare = percentageShare; }
 }
-

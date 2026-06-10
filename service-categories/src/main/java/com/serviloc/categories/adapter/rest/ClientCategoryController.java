@@ -1,13 +1,13 @@
 package com.serviloc.categories.adapter.rest;
 
+import com.serviloc.categories.application.dto.CategoryResponseDto;
 import com.serviloc.categories.application.service.CategoryService;
-import com.serviloc.categories.domain.model.ServiceCategory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/client/categories")
+@RequestMapping("/v1/client/categories")
 public class ClientCategoryController {
 
     private final CategoryService service;
@@ -16,8 +16,9 @@ public class ClientCategoryController {
         this.service = service;
     }
 
+    /** Liste des catégories côté client (sans stats) */
     @GetMapping
-    public List<ServiceCategory> getAll() {
+    public List<CategoryResponseDto> listCategories() {
         return service.getAllForClient();
     }
 }

@@ -1,10 +1,10 @@
 package com.serviloc.categories.application.service;
 
 import com.serviloc.categories.application.dto.CategoryDto;
+import com.serviloc.categories.application.dto.CategoryResponseDto;
+import com.serviloc.categories.domain.exception.CategoryNotFoundException;
 import com.serviloc.categories.domain.model.ServiceCategory;
 import com.serviloc.categories.domain.repository.CategoryRepository;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,27 +18,40 @@ public class CategoryService {
         this.repository = repository;
     }
 
-    @Cacheable("categories:all")
-    public List<ServiceCategory> getAllForClient() {
-        return repository.findAll();
+    /** Liste côté client (sans stats) */
+    public List<CategoryResponseDto> getAllForClient() {
+        return repository.findAll().stream()
+                .map(CategoryResponseDto::from)
+                .toList();
     }
 
-    public List<ServiceCategory> getAllForAdmin() {
-        return repository.findAll();
+    /** Liste côté admin (avec stats calculées ailleurs) */
+    public List<CategoryResponseDto> getAllForAdmin() {
+        return repository.findAll().stream()
+                .map(cat -> CategoryResponseDto.withStats(cat, 47, 34)) // stats mockées
+                .toList();
     }
 
-    @CacheEvict(value = "categories:all", allEntries = true)
-    public ServiceCategory create(CategoryDto dto) {
-        return repository.save(dto.toDomain());
+    /** Création d’une catégorie */
+    public CategoryResponseDto create(CategoryDto dto) {
+        ServiceCategory category = dto.toDomain();
+        ServiceCategory saved = repository.save(category);
+        return CategoryResponseDto.from(saved);
     }
 
-    @CacheEvict(value = "categories:all", allEntries = true)
-    public ServiceCategory update(Long id, CategoryDto dto) {
-        return repository.save(dto.toDomainWithId(id));
+    /** Mise à jour par slug */
+    public CategoryResponseDto updateBySlug(String slug, CategoryDto dto) {
+        ServiceCategory existing = repository.findBySlug(slug)
+                .orElseThrow(() -> new CategoryNotFoundException(slug));
+        existing.updateDetails(dto.label(), dto.iconKey(), dto.color());
+        ServiceCategory updated = repository.save(existing);
+        return CategoryResponseDto.from(updated);
     }
 
-    @CacheEvict(value = "categories:all", allEntries = true)
-    public void delete(Long id) {
-        repository.delete(id);
+    /** Suppression par slug */
+    public void deleteBySlug(String slug) {
+        ServiceCategory existing = repository.findBySlug(slug)
+                .orElseThrow(() -> new CategoryNotFoundException(slug));
+        repository.delete(existing.getId()); // interne
     }
 }
