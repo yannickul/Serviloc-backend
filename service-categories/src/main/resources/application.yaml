@@ -1,0 +1,75 @@
+server:
+  port: ${SERVER_PORT:8087}   # valeur par défaut 8087
+
+spring:
+  application:
+    name: service-categories
+  profiles:
+    active: ${SPRING_PROFILE:local}
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:db-categories}:${POSTGRES_PORT:5432}/${POSTGRES_CATEGORIES_DB}
+    username: ${POSTGRES_CATEGORIES_USER}
+    password: ${POSTGRES_CATEGORIES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      idle-timeout: ${DB_IDLE_TIMEOUT:30000}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:always}
+      data-locations: classpath:data.sql
+      continue-on-error: true
+
+  redis:
+    host: ${REDIS_HOST:redis}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+    timeout: ${REDIS_TIMEOUT:20000}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}
+    register-with-eureka: ${EUREKA_REGISTER:true}
+    fetch-registry: ${EUREKA_FETCH:true}
+  instance:
+    prefer-ip-address: true
+
+rabbitmq:
+  host: ${RABBITMQ_HOST:rabbitmq}
+  port: ${RABBITMQ_PORT:5672}
+  username: ${RABBITMQ_DEFAULT_USER}
+  password: ${RABBITMQ_DEFAULT_PASS}
+  virtual-host: ${RABBITMQ_VHOST:/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+jwt:
+  secret: ${JWT_SECRET}
+  public-key: ${JWT_PUBLIC_KEY}
+
+logging:
+  level:
+    org.hibernate.SQL: ${LOG_SQL_LEVEL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_BINDER_LEVEL:TRACE}
