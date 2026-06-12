@@ -50,6 +50,8 @@ public class ProviderProfileService {
                 request.specialty(),
                 request.hourlyRate(),
                 request.serviceZoneCity(),
+                request.latitude(),
+                request.longitude(),
                 request.radiusKm(),
                 request.estCertifie(),
                 request.certifications(),

@@ -3,10 +3,7 @@ package com.serviloc.utilisateurs.domain.model;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Entité domaine ProviderProfile — zéro import Spring/JPA.
- * Contient toutes les informations métier du prestataire.
- */
+
 public class ProviderProfile {
 
     private final UUID id;
@@ -22,6 +19,9 @@ public class ProviderProfile {
     private List<String> certifications;
     private List<String> documentIds;
     private double monthlyEarnings;
+    private Double latitude;
+    private Double longitude;
+
 
     // Horaires hebdomadaires (JSON sérialisé en base)
     private String weeklyScheduleJson;
@@ -61,7 +61,7 @@ public class ProviderProfile {
     // ─── Business methods ─────────────────────────────────────────
 
     public void updateProfile(String specialty, double hourlyRate,
-                              String serviceZoneCity, double radiusKm,
+                              String serviceZoneCity, Double latitude, Double longitude, double radiusKm,
                               boolean estCertifie, List<String> certifications,
                               List<String> documentIds) {
         if (specialty != null && !specialty.isBlank()) this.specialty = specialty;
@@ -71,6 +71,8 @@ public class ProviderProfile {
         this.estCertifie = estCertifie;
         if (certifications != null) this.certifications = certifications;
         if (documentIds != null)    this.documentIds = documentIds;
+        if (latitude != 0) this.latitude = latitude;
+        if (longitude != 0) this.longitude = longitude;
     }
 
     public void updateAvailability(boolean isAvailable) {
@@ -104,4 +106,6 @@ public class ProviderProfile {
     public List<String> getDocumentIds()     { return documentIds; }
     public double getMonthlyEarnings()    { return monthlyEarnings; }
     public String getWeeklyScheduleJson() { return weeklyScheduleJson; }
+    public Double getLatitude()  { return latitude; }
+    public Double getLongitude() { return longitude; }
 }

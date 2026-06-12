@@ -30,6 +30,8 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
         entity.setSpecialty(profile.getSpecialty());
         entity.setHourlyRate(profile.getHourlyRate());
         entity.setServiceZoneCity(profile.getServiceZoneCity());
+        if (profile.getLatitude() != null) entity.setLatitude(profile.getLatitude());
+        if (profile.getLongitude() != null) entity.setLongitude(profile.getLongitude());
         entity.setRadiusKm(profile.getRadiusKm());
         entity.setEstCertifie(profile.isEstCertifie());
         entity.setAvailable(profile.isAvailable());

@@ -11,6 +11,8 @@ public final class ProviderProfileDtos {
             String specialty,
             @Min(0) double hourlyRate,
             String serviceZoneCity,
+            double latitude,
+            double longitude,
             @Min(1) @Max(100) double radiusKm,
             boolean estCertifie,
             List<String> certifications,
