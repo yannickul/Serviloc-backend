@@ -41,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers("/internal/**").permitAll()
                         .requestMatchers("/test/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Admin, agent, client, provider — authentifiés via JWT
+                        // Le contrôle de rôle est délégué au Gateway (S4)
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

@@ -49,12 +49,52 @@ public class UserEventPublisher {
         ));
     }
 
+    // ─── provider.profile_updated ─────────────────────────────────
+
+    public void publishProviderProfileUpdated(UUID providerId, String email) {
+        publish("provider.profile_updated", Map.of(
+                "providerId", providerId.toString(),
+                "email",      email
+        ));
+    }
+
+    // ─── provider.notified ────────────────────────────────────────
+
+    public void publishProviderNotified(UUID providerId, String email, String message) {
+        publish("provider.notified", Map.of(
+                "providerId", providerId.toString(),
+                "email",      email,
+                "message",    message
+        ));
+    }
+
     // ─── user.suspended ───────────────────────────────────────────
 
     public void publishUserSuspended(UUID userId, String email) {
         publish(RabbitMQConfig.RK_USER_SUSPENDED, Map.of(
                 "userId", userId.toString(),
                 "email",  email
+        ));
+    }
+
+    // ─── user.reactivated ─────────────────────────────────────────
+
+    public void publishUserReactivated(UUID userId, String email) {
+        publish("user.reactivated", Map.of(
+                "userId", userId.toString(),
+                "email",  email
+        ));
+    }
+
+    // ─── agent.created ────────────────────────────────────────────
+
+    public void publishAgentCreated(UUID agentId, String email,
+                                    String agentCode, String tempPassword) {
+        publish("agent.created", Map.of(
+                "agentId",      agentId.toString(),
+                "email",        email,
+                "agentCode",    agentCode,
+                "tempPassword", tempPassword
         ));
     }
 
@@ -71,7 +111,8 @@ public class UserEventPublisher {
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
             log.info("[RabbitMQ] Publié → routingKey={}", routingKey);
         } catch (Exception e) {
-            log.error("[RabbitMQ] Échec publication routingKey={} : {}", routingKey, e.getMessage());
+            log.error("[RabbitMQ] Échec publication routingKey={} : {}",
+                    routingKey, e.getMessage());
         }
     }
 }
