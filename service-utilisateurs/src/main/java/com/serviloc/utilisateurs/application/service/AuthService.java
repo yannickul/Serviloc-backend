@@ -147,7 +147,8 @@ public class AuthService {
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.email());
-        String accessToken  = jwtService.generateAccessToken(userDetails, user.getRole().name());
+        String accessToken = jwtService.generateAccessToken(
+                userDetails, user.getRole().name(), user.getId().toString());
         String refreshToken = jwtService.generateRefreshToken(userDetails);
 
         refreshTokenRepository.revokeAllByUserId(user.getId());
@@ -182,7 +183,7 @@ public class AuthService {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String newAccessToken = jwtService.generateAccessToken(
-                userDetails, user.getRole().name());
+                userDetails, user.getRole().name(), user.getId().toString());
 
         return new AuthResponse(
                 newAccessToken,
