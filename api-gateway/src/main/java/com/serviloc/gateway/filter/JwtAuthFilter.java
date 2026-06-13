@@ -57,7 +57,10 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
             // ─── Validation JWT ───────────────────────────────────
             try {
                 Claims claims = jwtService.validateAndExtract(token);
-                String userId = claims.getSubject();
+                String userId = claims.get("userId", String.class);
+                if (userId == null || userId.isBlank()) {
+                    userId = claims.getSubject(); // fallback si ancien token
+                }
                 String role   = claims.get("role", String.class);
 
                 log.debug("[Gateway] JWT valide → userId={} role={}", userId, role);
