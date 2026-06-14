@@ -52,7 +52,7 @@ public class NegociationEventPublisher {
                                      UUID clientId, UUID providerId,
                                      double amount, String paymentMethod,
                                      String phoneNumber) {
-        publish("negotiation.quote_accepted", Map.of(
+        publish("negotiation.quote.accepted", Map.of(
                 "quoteId",       quoteId.toString(),
                 "demandId",      demandId.toString(),
                 "clientId",      clientId.toString(),
@@ -66,7 +66,7 @@ public class NegociationEventPublisher {
     // ─── negotiation.quote_refused ────────────────────────────────
 
     public void publishQuoteRefused(UUID quoteId, UUID demandId, UUID providerId) {
-        publish("negotiation.quote_refused", Map.of(
+        publish("negotiation.quote.refused", Map.of(
                 "quoteId",    quoteId.toString(),
                 "demandId",   demandId.toString(),
                 "providerId", providerId.toString()

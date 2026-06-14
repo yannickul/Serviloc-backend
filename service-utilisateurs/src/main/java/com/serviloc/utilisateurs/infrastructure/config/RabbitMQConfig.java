@@ -90,8 +90,12 @@ public class RabbitMQConfig {
 
     // ─── Bindings ─────────────────────────────────────────────────
 
-    @Bean Binding bindPaymentNegotiationQuote(Queue paymentQueue, TopicExchange servilocEventsExchange) {
-        return BindingBuilder.bind(paymentQueue).to(servilocEventsExchange).with("negotiation.quote.*");
+    @Bean Binding bindPaymentQuoteAccepted(Queue paymentQueue, TopicExchange servilocEventsExchange) {
+        return BindingBuilder.bind(paymentQueue).to(servilocEventsExchange).with("negotiation.quote.accepted");
+    }
+
+    @Bean Binding bindPaymentQuoteRefused(Queue paymentQueue, TopicExchange servilocEventsExchange) {
+        return BindingBuilder.bind(paymentQueue).to(servilocEventsExchange).with("negotiation.quote.refused");
     }
 
     @Bean Binding bindPaymentMissionCompleted(Queue paymentQueue, TopicExchange servilocEventsExchange) {
