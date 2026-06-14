@@ -2,7 +2,7 @@ package com.serviloc.categories.infrastructure.persistence;
 
 import com.serviloc.categories.domain.model.ServiceCategory;
 import com.serviloc.categories.domain.repository.CategoryRepository;
-import com.serviloc.categories.domain.exception.CategoryNotFoundException;
+import com.serviloc.categories.infrastructure.persistence.CategoryJpaEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,9 +19,7 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
 
     @Override
     public List<ServiceCategory> findAll() {
-        return repo.findAll().stream()
-                .map(this::toDomain)
-                .toList();
+        return repo.findAll().stream().map(this::toDomain).toList();
     }
 
     @Override
@@ -41,24 +39,18 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         repo.deleteById(id);
     }
 
-    /** Conversion JPA → Domaine */
     private ServiceCategory toDomain(CategoryJpaEntity e) {
         return ServiceCategory.reconstitute(
-                e.getId(),          // interne
-                e.getSlug(),        // identifiant public
-                e.getLabel(),
-                e.getIconKey(),
-                e.getColor(),
-                e.getDemandCount(),
-                e.getPercentageShare()
+                e.getId(), e.getSlug(), e.getLabel(),
+                e.getIconKey(), e.getColor(),
+                e.getDemandCount(), e.getPercentageShare()
         );
     }
 
-    /** Conversion Domaine → JPA */
     private CategoryJpaEntity toEntity(ServiceCategory c) {
         CategoryJpaEntity e = new CategoryJpaEntity();
-        e.setId(c.getId());          // interne
-        e.setSlug(c.getSlug());      // exposé comme "id" côté API
+        e.setId(c.getId());
+        e.setSlug(c.getSlug());
         e.setLabel(c.getLabel());
         e.setIconKey(c.getIconKey());
         e.setColor(c.getColor());
@@ -67,3 +59,4 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         return e;
     }
 }
+
