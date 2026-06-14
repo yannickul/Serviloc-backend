@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8087}   # valeur par défaut 8087
+  port: ${SERVER_PORT:8087}
 
 spring:
   application:
@@ -7,43 +7,83 @@ spring:
   profiles:
     active: ${SPRING_PROFILE:local}
 
+# =========================
+# Profil LOCAL
+# =========================
+---
+spring:
+  config:
+    activate:
+      on-profile: local
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:db-categories}:${POSTGRES_PORT:5432}/${POSTGRES_CATEGORIES_DB}
-    username: ${POSTGRES_CATEGORIES_USER}
-    password: ${POSTGRES_CATEGORIES_PASSWORD}
+    url: jdbc:postgresql://localhost:5447/${POSTGRES_CATEGORIES_DB:db_categories}
+    username: ${POSTGRES_CATEGORIES_USER:svc_categories}
+    password: ${POSTGRES_CATEGORIES_PASSWORD:categories_pass_2026}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
       minimum-idle: ${DB_MIN_IDLE:2}
       idle-timeout: ${DB_IDLE_TIMEOUT:30000}
       connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
-
   jpa:
     hibernate:
       ddl-auto: ${HIBERNATE_DDL_AUTO:update}
     show-sql: ${SHOW_SQL:true}
-    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
+    defer-datasource-initialization: true   # ✅ important pour data.sql
   sql:
     init:
-      mode: ${SQL_INIT_MODE:always}
-      data-locations: classpath:data.sql
-      continue-on-error: true
+      mode: always                          # ✅ exécuter data.sql au démarrage
 
+# =========================
+# Profil DOCKER
+# =========================
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://serviloc-db-categories:5432/${POSTGRES_CATEGORIES_DB:db_categories}
+    username: ${POSTGRES_CATEGORIES_USER:svc_categories}
+    password: ${POSTGRES_CATEGORIES_PASSWORD:categories_pass_2026}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      idle-timeout: ${DB_IDLE_TIMEOUT:30000}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    defer-datasource-initialization: true   # ✅ idem pour Docker
+  sql:
+    init:
+      mode: always
+
+# =========================
+# Config commune (Redis, Eureka, RabbitMQ, JWT, Logging)
+# =========================
+---
+spring:
   redis:
-    host: ${REDIS_HOST:redis}
+    host: ${REDIS_HOST:localhost}           # ✅ localhost par défaut en local
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD}
+    password: ${REDIS_PASSWORD:redis123}
     timeout: ${REDIS_TIMEOUT:20000}
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
     register-with-eureka: ${EUREKA_REGISTER:true}
     fetch-registry: ${EUREKA_FETCH:true}
   instance:
@@ -52,8 +92,8 @@ eureka:
 rabbitmq:
   host: ${RABBITMQ_HOST:rabbitmq}
   port: ${RABBITMQ_PORT:5672}
-  username: ${RABBITMQ_DEFAULT_USER}
-  password: ${RABBITMQ_DEFAULT_PASS}
+  username: ${RABBITMQ_DEFAULT_USER:guest}
+  password: ${RABBITMQ_DEFAULT_PASS:guest}
   virtual-host: ${RABBITMQ_VHOST:/}
 
 management:
@@ -66,10 +106,11 @@ management:
       show-details: always
 
 jwt:
-  secret: ${JWT_SECRET}
-  public-key: ${JWT_PUBLIC_KEY}
+  secret: ${JWT_SECRET:defaultSecret}
+  public-key: ${JWT_PUBLIC_KEY:defaultPublicKey}
 
 logging:
   level:
     org.hibernate.SQL: ${LOG_SQL_LEVEL:DEBUG}
     org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_BINDER_LEVEL:TRACE}
+

@@ -17,43 +17,47 @@ public class CategoryController {
         this.categoryRepository = categoryRepository;
     }
 
+    // GET all
     @GetMapping
     public ResponseEntity<List<CategoryJpaEntity>> getAllCategories() {
         return ResponseEntity.ok(categoryRepository.findAll());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<CategoryJpaEntity> getCategoryById(@PathVariable Long id) {
-        return categoryRepository.findById(id)
+    // GET by slug
+    @GetMapping("/{slug}")
+    public ResponseEntity<CategoryJpaEntity> getCategoryBySlug(@PathVariable String slug) {
+        return categoryRepository.findBySlug(slug)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // POST create
     @PostMapping
     public ResponseEntity<CategoryJpaEntity> createCategory(@RequestBody CategoryJpaEntity category) {
         return ResponseEntity.ok(categoryRepository.save(category));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<CategoryJpaEntity> updateCategory(@PathVariable Long id,
+    // PUT update by slug
+    @PutMapping("/{slug}")
+    public ResponseEntity<CategoryJpaEntity> updateCategory(@PathVariable String slug,
                                                             @RequestBody CategoryJpaEntity category) {
-        return categoryRepository.findById(id)
+        return categoryRepository.findBySlug(slug)
                 .map(existing -> {
-                    category.setId(id);
+                    category.setId(existing.getId()); // garder l’ID interne
                     return ResponseEntity.ok(categoryRepository.save(category));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
-   @DeleteMapping("/{id}")
-public ResponseEntity<?> deleteCategory(@PathVariable Long id) {
-    return categoryRepository.findById(id)
-            .map(existing -> {
-                categoryRepository.delete(existing);
-                return ResponseEntity.noContent().build();
-            })
-            .orElse(ResponseEntity.notFound().build());
-}
-
+    // DELETE by slug
+    @DeleteMapping("/{slug}")
+    public ResponseEntity<?> deleteCategory(@PathVariable String slug) {
+        return categoryRepository.findBySlug(slug)
+                .map(existing -> {
+                    categoryRepository.delete(existing);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
 

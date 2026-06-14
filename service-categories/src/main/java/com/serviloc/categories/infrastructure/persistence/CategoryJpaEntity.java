@@ -3,7 +3,7 @@ package com.serviloc.categories.infrastructure.persistence;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "service_category") // nom de table plus cohérent
+@Table(name = "categories") // nom de table plus cohérent
 public class CategoryJpaEntity {
 
     @Id
