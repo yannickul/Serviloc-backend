@@ -34,9 +34,9 @@ public class JwtService {
 
 
 
-    public String generateAccessToken(UserDetails userDetails, String role) {
+    public String generateAccessToken(UserDetails userDetails, String role, String userId) {
         return buildToken(
-                Map.of("role", role, "type", "access"),
+                Map.of("role", role, "type", "access", "userId", userId),
                 userDetails.getUsername(),
                 accessTokenExpiration
         );

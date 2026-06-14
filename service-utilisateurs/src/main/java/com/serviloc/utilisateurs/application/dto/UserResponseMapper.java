@@ -83,6 +83,37 @@ public final class UserResponseMapper {
         );
     }
 
+    public static ProfileDtos.ProviderProfileResponse toProviderProfile(
+            User user, com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        return new ProfileDtos.ProviderProfileResponse(
+                UserIdFormatter.formatUserId(user.getId()),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getCompletedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                profile.getMonthlyEarnings(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                formatDate(user)
+        );
+    }
+
     // ─── Agent profile ────────────────────────────────────────────
 
     public static ProfileDtos.AgentProfileResponse toAgentProfile(User user,
@@ -105,6 +136,7 @@ public final class UserResponseMapper {
                 formatDate(user)
         );
     }
+
 
     // ─── Helper ───────────────────────────────────────────────────
 
