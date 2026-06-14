@@ -1,0 +1,86 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: service-paiement
+
+  datasource:
+    url: jdbc:postgresql://localhost:5444/${POSTGRES_PAIEMENT_DB:db_paiement}
+    username: ${POSTGRES_PAIEMENT_USER:svc_paiement}
+    password: ${POSTGRES_PAIEMENT_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER:admin}
+    password: ${RABBITMQ_DEFAULT_PASS}
+    virtual-host: ${RABBITMQ_VHOST:/}
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOSTNAME:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+
+# ─── Resilience4j ────────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      mobileMoney:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+  retry:
+    instances:
+      mobileMoney:
+        maxAttempts: 3
+        waitDuration: 2s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+  timelimiter:
+    instances:
+      mobileMoney:
+        timeoutDuration: 30s
+
+# ─── Commission par défaut ────────────────────────────────────────
+payment:
+  commission:
+    standard-rate: 10.0   # 10%
+    urgency-rate: 15.0    # 15%
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,circuitbreakers"
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.serviloc: DEBUG
+    org.springframework.amqp: INFO
+    io.github.resilience4j: INFO

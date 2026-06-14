@@ -141,7 +141,7 @@
       "vhost": "/",
       "destination": "payment.queue",
       "destination_type": "queue",
-      "routing_key": "negotiation.quote.*",
+      "routing_key": "negotiation.quote.accepted",
       "arguments": {}
     },
     {
@@ -149,7 +149,7 @@
       "vhost": "/",
       "destination": "payment.queue",
       "destination_type": "queue",
-      "routing_key": "mission.completed",
+      "routing_key": "negotiation.quote.refused",
       "arguments": {}
     },
     {

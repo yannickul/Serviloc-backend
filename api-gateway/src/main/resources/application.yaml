@@ -184,6 +184,15 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+
+        # ── Service Paiement (port 8084) ──────────────────────────
+        - id: paiement-admin
+          uri: lb://service-paiement
+          predicates:
+            - Path=/v1/admin/transactions/**, /v1/admin/settings/commission
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
 eureka:
   client:
     service-url:
