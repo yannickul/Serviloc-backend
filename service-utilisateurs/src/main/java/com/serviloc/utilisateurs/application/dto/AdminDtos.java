@@ -65,4 +65,26 @@ public final class AdminDtos {
             String status,
             String message
     ) {}
+
+    // ─── Agent Review Requests ────────────────────────────────────
+
+    public record ProviderReviewRequest(
+            @NotBlank
+            @Pattern(regexp = "needs_revision|approved|rejected",
+                    message = "verdict doit être needs_revision, approved ou rejected")
+            String verdict,
+            @NotBlank String comment
+    ) {}
+
+    // ─── Agent Review Response ────────────────────────────────────
+
+    public record ProviderReviewResponse(
+            String id,
+            String agentId,
+            String providerId,
+            String verdict,
+            String comment,
+            String reviewedAt,
+            String message
+    ) {}
 }

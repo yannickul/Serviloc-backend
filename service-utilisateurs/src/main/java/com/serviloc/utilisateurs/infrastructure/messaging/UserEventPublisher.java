@@ -97,6 +97,25 @@ public class UserEventPublisher {
                 "tempPassword", tempPassword
         ));
     }
+    // ─── provider.review_submitted ────────────────────────────────
+
+    public void publishProviderReviewSubmitted(UUID agentId, UUID providerId,
+                                               String verdict) {
+        publish("provider.review_submitted", Map.of(
+                "agentId",    agentId.toString(),
+                "providerId", providerId.toString(),
+                "verdict",    verdict
+        ));
+    }
+
+    // ─── provider.needs_revision ──────────────────────────────────
+
+    public void publishProviderNeedsRevision(UUID providerId, String comment) {
+        publish("provider.needs_revision", Map.of(
+                "providerId", providerId.toString(),
+                "comment",    comment
+        ));
+    }
 
     // ─── Helper ───────────────────────────────────────────────────
 
