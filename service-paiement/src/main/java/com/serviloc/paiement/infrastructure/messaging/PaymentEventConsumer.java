@@ -36,7 +36,7 @@ public class PaymentEventConsumer {
             String eventType = (String) event.get("eventType");
             log.info("[CONSUMER] eventType={}", eventType);
 
-            if ("negotiation.quote_accepted".equals(eventType)) {
+            if ("negotiation.quote.accepted".equals(eventType)) {
                 Map<String, Object> payload = (Map<String, Object>) event.get("payload");
                 handleQuoteAccepted(payload);
             } else if ("mission.completed".equals(eventType)) {
