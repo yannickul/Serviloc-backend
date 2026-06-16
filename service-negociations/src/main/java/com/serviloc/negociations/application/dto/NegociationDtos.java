@@ -3,7 +3,8 @@ package com.serviloc.negociations.application.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 public final class NegociationDtos {
@@ -96,5 +97,35 @@ public final class NegociationDtos {
             String providerId,
             String status,
             String createdAt
+    ) {}
+
+    // ─── Quote Requests ───────────────────────────────────────────
+
+    public record CreateQuoteRequest(
+            @NotNull String demandId,
+            @NotNull String providerId,
+            @Positive double amount,
+            String description,
+            List<MaterialRequest> materials,
+            int estimatedDurationHours
+    ) {}
+
+    public record MaterialRequest(
+            @NotBlank String name,
+            @Positive int quantity,
+            @PositiveOrZero double unitPrice
+    ) {}
+
+    public record UpdateQuoteStatusRequest(
+            @NotBlank String status,          // accepte | refuse
+            String paymentMethod,             // orange_money | mtn_momo
+            String phoneNumber
+    ) {}
+
+    public record UpdateQuoteRequest(
+            @Positive double amount,
+            String description,
+            List<MaterialRequest> materials,
+            int estimatedDurationHours
     ) {}
 }
