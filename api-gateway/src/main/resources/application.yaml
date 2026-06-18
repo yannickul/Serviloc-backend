@@ -24,7 +24,7 @@ spring:
 
       routes:
 
-        # ── Service Utilisateurs (port 8081) ──────────────────────
+        # ── Service Utilisateurs ──────────────────────────────────
         - id: utilisateurs-auth
           uri: lb://service-utilisateurs
           predicates:
@@ -39,6 +39,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: utilisateurs-provider
           uri: lb://service-utilisateurs
@@ -47,6 +48,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: utilisateurs-admin
           uri: lb://service-utilisateurs
@@ -55,8 +57,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Missions (port 8082) ──────────────────────────
+        # ── Service Missions ──────────────────────────────────────
         - id: missions-client
           uri: lb://service-missions
           predicates:
@@ -64,6 +67,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: missions-provider
           uri: lb://service-missions
@@ -72,6 +76,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: missions-admin
           uri: lb://service-missions
@@ -80,8 +85,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Négociations (port 8083) ──────────────────────
+        # ── Service Négociations ───────────────────────────────────
         - id: negociations-client
           uri: lb://service-negociations
           predicates:
@@ -89,6 +95,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: negociations-provider
           uri: lb://service-negociations
@@ -97,6 +104,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: negociations-admin-chat
           uri: lb://service-negociations
@@ -105,8 +113,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Litiges (port 8084) ───────────────────────────
+        # ── Service Litiges ───────────────────────────────────────
         - id: litiges-admin
           uri: lb://service-litiges
           predicates:
@@ -114,8 +123,27 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Catégories (port 8085) ────────────────────────
+        - id: client-litiges
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/client/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - RoleAuthFilter
+
+        - id: provider-litiges
+          uri: lb://service-litiges
+          predicates:
+            - Path=/v1/provider/litiges/**
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - RoleAuthFilter
+
+        # ── Service Catégories ────────────────────────────────────
         - id: categories-client
           uri: lb://service-categories
           predicates:
@@ -123,6 +151,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
         - id: categories-admin
           uri: lb://service-categories
@@ -131,8 +160,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Fichiers (port 8086) ──────────────────────────
+        # ── Service Fichiers ──────────────────────────────────────
         - id: fichiers-uploads
           uri: lb://service-fichiers
           predicates:
@@ -140,7 +170,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
-        # ── Agent — Providers (instruit dossiers prestataires) ────
+            - RoleAuthFilter
+
+        # ── Agent ─────────────────────────────────────────────────
         - id: agent-providers
           uri: lb://service-utilisateurs
           predicates:
@@ -148,8 +180,8 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Agent — Litiges ───────────────────────────────────────
         - id: agent-litiges
           uri: lb://service-litiges
           predicates:
@@ -157,26 +189,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Client — Litiges (résolution) ─────────────────────────
-        - id: client-litiges
-          uri: lb://service-litiges
-          predicates:
-            - Path=/v1/client/litiges/**
-          filters:
-            - StripPrefix=1
-            - JwtAuthFilter
-
-        # ── Provider — Litiges (résolution) ───────────────────────
-        - id: provider-litiges
-          uri: lb://service-litiges
-          predicates:
-            - Path=/v1/provider/litiges/**
-          filters:
-            - StripPrefix=1
-            - JwtAuthFilter
-
-        # ── Admin — Agents ────────────────────────────────────────
+        # ── Admin Agents ──────────────────────────────────────────
         - id: admin-agents
           uri: lb://service-utilisateurs
           predicates:
@@ -184,8 +199,9 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 
-        # ── Service Paiement (port 8084) ──────────────────────────
+        # ── Paiement Admin ────────────────────────────────────────
         - id: paiement-admin
           uri: lb://service-paiement
           predicates:
@@ -193,6 +209,7 @@ spring:
           filters:
             - StripPrefix=1
             - JwtAuthFilter
+            - RoleAuthFilter
 eureka:
   client:
     service-url:
