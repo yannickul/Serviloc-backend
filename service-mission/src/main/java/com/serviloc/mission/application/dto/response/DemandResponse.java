@@ -36,7 +36,7 @@ public class DemandResponse {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public boolean isUrgent() { return isUrgent; }
-    public void setUrgent(boolean urgent) { isUrgent = urgent; }
+    public void setIsUrgent(boolean urgent) { isUrgent = urgent; }
     public BudgetRangeDto getEstimatedBudget() { return estimatedBudget; }
     public void setEstimatedBudget(BudgetRangeDto estimatedBudget) { this.estimatedBudget = estimatedBudget; }
     public String getProviderId() { return providerId; }

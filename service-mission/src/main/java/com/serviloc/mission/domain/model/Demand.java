@@ -33,7 +33,7 @@ public class Demand {
     public DemandStatus getStatus() { return status; }
     public void setStatus(DemandStatus status) { this.status = status; }
     public boolean isUrgent() { return isUrgent; }
-    public void setUrgent(boolean urgent) { isUrgent = urgent; }
+    public void setIsUrgent(boolean urgent) { isUrgent = urgent; }
     public BudgetRange getEstimatedBudget() { return estimatedBudget; }
     public void setEstimatedBudget(BudgetRange estimatedBudget) { this.estimatedBudget = estimatedBudget; }
     public String getProviderId() { return providerId; }
@@ -42,4 +42,6 @@ public class Demand {
     public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+
 }

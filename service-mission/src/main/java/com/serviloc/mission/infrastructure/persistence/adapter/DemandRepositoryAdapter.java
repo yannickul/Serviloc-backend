@@ -93,7 +93,7 @@ public class DemandRepositoryAdapter implements DemandRepository {
         entity.setDescription(demand.getDescription());
         entity.setPhotoIds(demand.getPhotoIds());
         entity.setStatus(demand.getStatus().name());
-        entity.setUrgent(demand.isUrgent());
+        entity.setIsUrgent(demand.isUrgent());
         entity.setCreatedAt(demand.getCreatedAt());
         entity.setProviderId(demand.getProviderId());
         entity.setQuoteId(demand.getQuoteId());
@@ -117,7 +117,7 @@ public class DemandRepositoryAdapter implements DemandRepository {
         demand.setDescription(entity.getDescription());
         demand.setPhotoIds(entity.getPhotoIds());
         demand.setStatus(DemandStatus.valueOf(entity.getStatus()));
-        demand.setUrgent(entity.isUrgent());
+        demand.setIsUrgent(entity.isUrgent());
         demand.setCreatedAt(entity.getCreatedAt());
         demand.setProviderId(entity.getProviderId());
         demand.setQuoteId(entity.getQuoteId());

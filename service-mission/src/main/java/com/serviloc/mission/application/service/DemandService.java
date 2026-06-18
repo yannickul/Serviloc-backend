@@ -51,7 +51,7 @@ public class DemandService implements DemandUseCase {
                 request.getLocation().getAddress()
         ));
         demand.setStatus(DemandStatus.OUVERTE);
-        demand.setUrgent(request.isUrgent());
+        demand.setIsUrgent(request.isUrgent());
         demand.setEstimatedBudget(new BudgetRange(
                 request.getEstimatedBudget().getMin(),
                 request.getEstimatedBudget().getMax()
@@ -94,7 +94,7 @@ public class DemandService implements DemandUseCase {
                 .orElseThrow(() -> new DemandNotFoundException(id));
 
         if (!demand.getClientId().equals(clientId)) {
-            throw new UnauthorizedMissionAccessException(clientId, id);
+            throw new UnauthorizedMissionAccessException(clientId, id, "demand");
         }
 
         return toResponse(demand);
@@ -106,7 +106,7 @@ public class DemandService implements DemandUseCase {
                 .orElseThrow(() -> new DemandNotFoundException(id));
 
         if (!demand.getClientId().equals(clientId)) {
-            throw new UnauthorizedMissionAccessException(clientId, id);
+            throw new UnauthorizedMissionAccessException(clientId, id, "demand");
         }
 
         demand.setStatus(DemandStatus.ANNULEE);
@@ -153,7 +153,7 @@ public class DemandService implements DemandUseCase {
         response.setDescription(demand.getDescription());
         response.setPhotoIds(demand.getPhotoIds());
         response.setStatus(demand.getStatus().name());
-        response.setUrgent(demand.isUrgent());
+        response.setIsUrgent(demand.isUrgent());
         response.setCreatedAt(demand.getCreatedAt());
         response.setProviderId(demand.getProviderId());
         response.setQuoteId(demand.getQuoteId());

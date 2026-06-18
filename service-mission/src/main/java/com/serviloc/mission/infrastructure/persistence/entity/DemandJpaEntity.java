@@ -138,7 +138,7 @@ public class DemandJpaEntity {
         return isUrgent;
     }
 
-    public void setUrgent(boolean urgent) {
+    public void setIsUrgent(boolean urgent) {
         isUrgent = urgent;
     }
 
