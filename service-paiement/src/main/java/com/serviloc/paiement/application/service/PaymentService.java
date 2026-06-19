@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @Transactional
@@ -179,7 +180,42 @@ public class PaymentService {
         transaction.freeze();
         return transactionRepository.save(transaction);
     }
+// ─── GET /provider/earnings ───────────────────────────────────
 
+    @Transactional(readOnly = true)
+    public ProviderEarnings getProviderEarnings(UUID providerId, int page,
+                                                int limit, String month) {
+        // Parse month "2026-05" → from/to
+        LocalDateTime from;
+        LocalDateTime to;
+
+        if (month != null && !month.isBlank()) {
+            String[] parts = month.split("-");
+            int year  = Integer.parseInt(parts[0]);
+            int monthNum = Integer.parseInt(parts[1]);
+            from = LocalDateTime.of(year, monthNum, 1, 0, 0, 0);
+            to   = from.plusMonths(1).minusSeconds(1);
+        } else {
+            // Mois courant par défaut
+            from = LocalDateTime.now().withDayOfMonth(1).withHour(0)
+                    .withMinute(0).withSecond(0);
+            to   = LocalDateTime.now();
+        }
+
+        double monthlyTotal = transactionRepository
+                .sumAmountByProviderIdAndCreatedAtBetween(providerId, from, to);
+
+        List<Payout> payouts = payoutRepository.findByProviderId(providerId);
+
+        return new ProviderEarnings(monthlyTotal, payouts);
+    }
+
+// ─── DTO interne ──────────────────────────────────────────────
+
+    public record ProviderEarnings(
+            double monthlyTotal,
+            List<com.serviloc.paiement.domain.model.Payout> payouts
+    ) {}
     // ─── GET /internal/stats/financials ───────────────────────────
 
     @Transactional(readOnly = true)

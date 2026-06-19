@@ -72,7 +72,7 @@ spring:
         - id: missions-provider
           uri: lb://service-missions
           predicates:
-            - Path=/v1/provider/demands/**, /v1/provider/missions/**, /v1/provider/dashboard, /v1/provider/earnings
+            - Path=/v1/provider/demands/**, /v1/provider/missions/**, /v1/provider/dashboard
           filters:
             - StripPrefix=1
             - JwtAuthFilter
@@ -206,6 +206,15 @@ spring:
           uri: lb://service-paiement
           predicates:
             - Path=/v1/admin/transactions/**, /v1/admin/settings/commission
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - RoleAuthFilter
+
+        - id: provider-earnings
+          uri: lb://service-paiement
+          predicates:
+            - Path=/v1/provider/earnings
           filters:
             - StripPrefix=1
             - JwtAuthFilter
