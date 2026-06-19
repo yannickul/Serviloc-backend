@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
-import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -13,6 +12,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 
 @Configuration
 public class GatewayConfig {
@@ -28,12 +28,19 @@ public class GatewayConfig {
     // ─── Key Resolver ─────────────────────────────────────────────
     // Priorité : X-User-Id (authentifié) > IP (public)
 
+
+    // ─── Rate Limiter — config par défaut (surchargée par route dans application.yml)
     @Bean
-    public KeyResolver rateLimitKeyResolver() {
+    public RedisRateLimiter redisRateLimiter() {
+        return new RedisRateLimiter(10, 20, 1); // valeurs par défaut, ignorées si args fournis en YAML
+    }
+
+    @Bean
+    public KeyResolver roleKeyResolver() {
         return exchange -> {
-            String userId = exchange.getRequest().getHeaders().getFirst("X-User-Id");
-            if (userId != null && !userId.isBlank()) {
-                return Mono.just("user:" + userId);
+            String role = exchange.getRequest().getHeaders().getFirst("X-User-Role");
+            if (role != null && !role.isBlank()) {
+                return Mono.just("role:" + role.toUpperCase());
             }
             String ip = exchange.getRequest().getRemoteAddress() != null
                     ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
@@ -42,16 +49,6 @@ public class GatewayConfig {
         };
     }
 
-    // ─── Rate Limiter Redis ───────────────────────────────────────
-    // Token Bucket : replenishRate tokens/s, burst max burstCapacity
-
-    @Bean
-    public RedisRateLimiter redisRateLimiter() {
-        return new RedisRateLimiter(replenishRate, burstCapacity, 1);
-    }
-
-    // ─── Fallback circuit breaker ─────────────────────────────────
-    // Appelé quand un service downstream est indisponible
 
     @Bean
     public RouterFunction<ServerResponse> fallbackRoute() {
