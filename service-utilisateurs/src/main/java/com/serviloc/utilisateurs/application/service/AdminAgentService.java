@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.serviloc.utilisateurs.application.dto.UserIdFormatter;
 
 import java.util.List;
 import java.util.UUID;
@@ -91,6 +92,50 @@ public class AdminAgentService {
         List<AgentProfileResponse> agents = List.of();
         PageMeta meta = new PageMeta(page, limit, 0, 0);
         return new AgentListResponse(agents, meta);
+    }
+    // ─── PATCH /admin/agents/:id/suspend ──────────────────────────
+
+    public SuspendResponse suspendAgent(UUID agentUserId, SuspendUserRequest request) {
+        User user = userRepository.findById(agentUserId)
+                .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+
+        if (user.getRole() != UserRole.AGENT) {
+            throw new IllegalStateException("Cet utilisateur n'est pas un agent");
+        }
+
+        user.suspend();
+        userRepository.save(user);
+
+        eventPublisher.publishUserSuspended(agentUserId, user.getEmail());
+
+        log.info("[ADMIN] Agent suspendu : userId={} reason={}", agentUserId, request.reason());
+
+        return new SuspendResponse(
+                UserIdFormatter.formatUserId(agentUserId),
+                "suspended",
+                request.duration(),
+                request.reason()
+        );
+    }
+
+// ─── DELETE /admin/agents/:id ──────────────────────────────────
+
+    public AgentDeletedResponse deleteAgent(UUID agentUserId) {
+        User user = userRepository.findById(agentUserId)
+                .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
+
+        if (user.getRole() != UserRole.AGENT) {
+            throw new IllegalStateException("Cet utilisateur n'est pas un agent");
+        }
+
+        userRepository.delete(agentUserId);
+
+        log.info("[ADMIN] Agent supprimé définitivement : userId={}", agentUserId);
+
+        return new AgentDeletedResponse(
+                UserIdFormatter.formatUserId(agentUserId),
+                true
+        );
     }
 
     // ─── GET /admin/agents/:id ────────────────────────────────────

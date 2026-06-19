@@ -87,4 +87,9 @@ public final class AdminDtos {
             String reviewedAt,
             String message
     ) {}
+
+    public record AgentDeletedResponse(
+            String agentId,
+            boolean deleted
+    ) {}
 }

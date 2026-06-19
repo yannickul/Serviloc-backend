@@ -19,16 +19,22 @@ public class UserRepositoryAdapter implements UserRepository {
 
     @Override
     public User save(User user) {
-        UserJpaEntity entity = new UserJpaEntity(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getPassword(),
-                user.getPhone(),
-                user.getRole(),
-                user.getStatus()
-        );
+        UserJpaEntity entity = jpa.findById(user.getId())
+                .orElse(new UserJpaEntity(
+                        user.getId(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail(),
+                        user.getPassword(),
+                        user.getPhone(),
+                        user.getRole(),
+                        user.getStatus()
+                ));
+
+        // Met à jour les champs mutables sur l'entité existante
+        // (préserve createdAt qui est géré par @CreatedDate à l'insertion uniquement)
+        entity.setStatus(user.getStatus());
+
         return toDomain(jpa.save(entity));
     }
 
@@ -65,5 +71,10 @@ public class UserRepositoryAdapter implements UserRepository {
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution User", ex);
         }
+    }
+
+    @Override
+    public void delete(UUID id) {
+        jpa.deleteById(id);
     }
 }
