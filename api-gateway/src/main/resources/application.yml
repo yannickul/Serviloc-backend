@@ -40,6 +40,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: utilisateurs-provider
           uri: lb://service-utilisateurs
@@ -49,6 +55,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: utilisateurs-admin
           uri: lb://service-utilisateurs
@@ -58,6 +70,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Service Missions ──────────────────────────────────────
         - id: missions-client
@@ -68,6 +86,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: missions-provider
           uri: lb://service-missions
@@ -77,6 +101,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: missions-admin
           uri: lb://service-missions
@@ -86,6 +116,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Service Négociations ───────────────────────────────────
         - id: negociations-client
@@ -96,6 +132,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: negociations-provider
           uri: lb://service-negociations
@@ -105,6 +147,13 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
+
 
         - id: negociations-admin-chat
           uri: lb://service-negociations
@@ -114,6 +163,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Service Litiges ───────────────────────────────────────
         - id: litiges-admin
@@ -124,6 +179,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: client-litiges
           uri: lb://service-litiges
@@ -133,6 +194,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: provider-litiges
           uri: lb://service-litiges
@@ -142,6 +209,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Service Catégories ────────────────────────────────────
         - id: categories-client
@@ -152,6 +225,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: categories-admin
           uri: lb://service-categories
@@ -161,6 +240,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Service Fichiers ──────────────────────────────────────
         - id: fichiers-uploads
@@ -171,6 +256,13 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
+
 
         # ── Agent ─────────────────────────────────────────────────
         - id: agent-providers
@@ -181,6 +273,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         - id: agent-litiges
           uri: lb://service-litiges
@@ -190,6 +288,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Admin Agents ──────────────────────────────────────────
         - id: admin-agents
@@ -200,6 +304,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 
         # ── Paiement Admin ────────────────────────────────────────
         - id: paiement-admin
@@ -210,6 +320,13 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 50
+                redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
+
 
         - id: provider-earnings
           uri: lb://service-paiement
@@ -219,6 +336,12 @@ spring:
             - StripPrefix=1
             - JwtAuthFilter
             - RoleAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
 eureka:
   client:
     service-url:
