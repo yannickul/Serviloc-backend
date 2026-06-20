@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/client/providers")
+@RequestMapping("/client")
 public class ClientProviderController {
 
     private final ProviderSearchUseCase providerSearchUseCase;
@@ -19,13 +19,13 @@ public class ClientProviderController {
         this.providerSearchUseCase = providerSearchUseCase;
     }
 
-    @GetMapping("/search")
+    @GetMapping("/providers/search")
     public ResponseEntity<ApiResponse<List<ProviderSummary>>> searchProviders(
+            @RequestHeader("X-User-Id") String clientId,
             @RequestParam double lat,
             @RequestParam double lng,
-            @RequestParam int radiusKm,
-            @RequestParam String categoryId,
-            @RequestHeader("X-User-Id") String clientId) {
+            @RequestParam(defaultValue = "20") int radiusKm,
+            @RequestParam(required = false) String categoryId) {
 
         List<ProviderSummary> providers =
                 providerSearchUseCase.searchProviders(lat, lng, radiusKm, categoryId);

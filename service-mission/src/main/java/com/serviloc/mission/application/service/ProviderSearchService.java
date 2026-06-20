@@ -20,6 +20,9 @@ public class ProviderSearchService implements ProviderSearchUseCase {
     @Override
     public List<ProviderSummary> searchProviders(
             double lat, double lng, int radiusKm, String categoryId) {
+        // radiusKm est dans la signature de l'interface mais UtilisateurClientAdapter
+        // utilise un rayon fixe de 20km défini dans l'appel Feign (accord Sprint 1).
+        // On passe categoryId comme specialty — voir point 1.3 du CONTEXT.md section 15.
         return providerPort.searchProviders(lat, lng, categoryId);
     }
 }
