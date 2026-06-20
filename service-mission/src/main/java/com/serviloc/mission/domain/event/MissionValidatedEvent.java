@@ -4,5 +4,6 @@ import java.math.BigDecimal;
 
 public record MissionValidatedEvent(
         String missionId,
-        String validatedBy
+        String validatedBy,
+        String role
 ) { }

@@ -1,6 +1,7 @@
 package com.serviloc.mission.domain.event;
 
 public record EvaluationCreatedEvent(
+        String missionId,
         String targetId,
         String targetRole,
-        double newRating) { }
+        int newRating) { }
