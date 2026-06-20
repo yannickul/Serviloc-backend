@@ -71,6 +71,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("INVALID_ARGUMENT", ex.getMessage()));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(
+            IllegalStateException ex) {
+        log.warn("Règle métier violée : {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("BUSINESS_RULE_VIOLATION", ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         log.error("Erreur inattendue : {}", ex.getMessage(), ex);
