@@ -31,9 +31,10 @@ public class UserRepositoryAdapter implements UserRepository {
                         user.getStatus()
                 ));
 
-        // Met à jour les champs mutables sur l'entité existante
+        // Synchronise tous les champs mutables sur l'entité existante
         // (préserve createdAt qui est géré par @CreatedDate à l'insertion uniquement)
         entity.setStatus(user.getStatus());
+        entity.setPassword(user.getPassword());
 
         return toDomain(jpa.save(entity));
     }

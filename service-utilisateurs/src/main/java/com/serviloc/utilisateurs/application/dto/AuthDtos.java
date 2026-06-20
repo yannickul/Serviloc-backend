@@ -75,4 +75,16 @@ public final class AuthDtos {
             String status,
             String createdAt
     ) {}
+
+    // ─── Forgot / Reset Password ───────────────────────────────────
+
+    public record ForgotPasswordRequest(
+            @NotBlank @Email String email
+    ) {}
+
+    public record ResetPasswordRequest(
+            @NotBlank @Email String email,
+            @NotBlank @Size(min = 6, max = 6) String code,
+            @NotBlank @Size(min = 8, message = "Mot de passe minimum 8 caractères") String newPassword
+    ) {}
 }

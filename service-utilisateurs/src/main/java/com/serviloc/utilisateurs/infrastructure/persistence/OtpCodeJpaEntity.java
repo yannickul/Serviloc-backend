@@ -1,6 +1,8 @@
 package com.serviloc.utilisateurs.infrastructure.persistence;
 
+import com.serviloc.utilisateurs.domain.model.OtpCode;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -21,6 +23,10 @@ public class OtpCodeJpaEntity {
     @Column(nullable = false, length = 6)
     private String code;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OtpCode.Purpose purpose = OtpCode.Purpose.REGISTRATION;
+
     @Column(nullable = false)
     private LocalDateTime expiresAt;
 
@@ -32,19 +38,22 @@ public class OtpCodeJpaEntity {
 
     protected OtpCodeJpaEntity() {}
 
-    public OtpCodeJpaEntity(UUID id, UUID userId, String code, LocalDateTime expiresAt) {
+    public OtpCodeJpaEntity(UUID id, UUID userId, String code,
+                            OtpCode.Purpose purpose, LocalDateTime expiresAt) {
         this.id = id;
         this.userId = userId;
         this.code = code;
+        this.purpose = purpose;
         this.expiresAt = expiresAt;
     }
 
-    public UUID getId()                 { return id; }
-    public UUID getUserId()             { return userId; }
-    public String getCode()             { return code; }
-    public LocalDateTime getExpiresAt() { return expiresAt; }
-    public int getAttempts()            { return attempts; }
-    public void setAttempts(int a)      { this.attempts = a; }
-    public boolean isUsed()             { return used; }
-    public void setUsed(boolean u)      { this.used = u; }
+    public UUID getId()                       { return id; }
+    public UUID getUserId()                   { return userId; }
+    public String getCode()                   { return code; }
+    public OtpCode.Purpose getPurpose()       { return purpose; }
+    public LocalDateTime getExpiresAt()       { return expiresAt; }
+    public int getAttempts()                  { return attempts; }
+    public void setAttempts(int a)            { this.attempts = a; }
+    public boolean isUsed()                   { return used; }
+    public void setUsed(boolean u)            { this.used = u; }
 }

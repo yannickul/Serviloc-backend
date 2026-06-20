@@ -74,6 +74,7 @@ public class UserJpaEntity {
     public String getLastName()           { return lastName; }
     public String getEmail()              { return email; }
     public String getPassword()           { return password; }
+    public void setPassword(String password) { this.password = password; }
     public String getPhone()              { return phone; }
     public UserRole getRole()             { return role; }
     public User.Status getStatus()        { return status; }

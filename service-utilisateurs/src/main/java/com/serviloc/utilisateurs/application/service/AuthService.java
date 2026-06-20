@@ -203,4 +203,54 @@ public class AuthService {
             refreshTokenRepository.save(rt);
         });
     }
+
+    // ─── POST /auth/forgot-password ───────────────────────────────
+
+    public MessageResponse forgotPassword(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.email()).ifPresent(user -> {
+            otpRepository.deleteByUserIdAndPurpose(user.getId(), OtpCode.Purpose.PASSWORD_RESET);
+            OtpCode otp = OtpCode.create(
+                    user.getId(), "123456", 10, OtpCode.Purpose.PASSWORD_RESET
+            );
+            otpRepository.save(otp);
+            log.info("[AUTH] Code reset password généré : userId={}", user.getId());
+            // TODO : event RabbitMQ pour Service Notifications (envoi email réel)
+        });
+
+        // Toujours 200, même si l'email n'existe pas (anti-énumération de comptes)
+        return new MessageResponse(
+                "Si un compte existe avec cet email, un code de réinitialisation a été envoyé."
+        );
+    }
+
+// ─── POST /auth/reset-password ────────────────────────────────
+
+    public MessageResponse resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
+
+        OtpCode otp = otpRepository
+                .findLatestByUserIdAndPurpose(user.getId(), OtpCode.Purpose.PASSWORD_RESET)
+                .orElseThrow(() -> new InvalidOtpException(
+                        "Aucune demande de réinitialisation trouvée"));
+
+        if (!otp.isValid(request.code())) {
+            otp.incrementAttempts();
+            otpRepository.save(otp);
+            throw new InvalidOtpException("Code invalide ou expiré");
+        }
+
+        otp.markUsed();
+        otpRepository.save(otp);
+
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        // Sécurité : invalide tous les refresh tokens existants
+        refreshTokenRepository.revokeAllByUserId(user.getId());
+
+        log.info("[AUTH] Mot de passe réinitialisé : userId={}", user.getId());
+
+        return new MessageResponse("Mot de passe réinitialisé avec succès");
+    }
 }

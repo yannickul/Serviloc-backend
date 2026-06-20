@@ -81,6 +81,13 @@ public class User {
                 : "?";
     }
 
+    public void changePassword(String newEncodedPassword) {
+        if (newEncodedPassword == null || newEncodedPassword.isBlank())
+            throw new IllegalArgumentException("Mot de passe obligatoire");
+        this.password = newEncodedPassword;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public boolean isActive() {
         return this.status == Status.ACTIVE;
     }

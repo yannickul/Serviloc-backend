@@ -63,4 +63,18 @@ public class AuthController {
         authService.logout(request.refreshToken());
         return ResponseEntity.ok(ApiResponse.ok(new MessageResponse("Déconnexion réussie")));
     }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Demande de réinitialisation de mot de passe")
+    public ResponseEntity<ApiResponse<MessageResponse>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.forgotPassword(request)));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Réinitialisation du mot de passe avec code OTP")
+    public ResponseEntity<ApiResponse<MessageResponse>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.resetPassword(request)));
+    }
 }
