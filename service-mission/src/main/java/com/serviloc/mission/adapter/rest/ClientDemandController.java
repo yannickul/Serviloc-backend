@@ -1,6 +1,7 @@
 // adapter/rest/ClientDemandController.java
 package com.serviloc.mission.adapter.rest;
 
+import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
 import com.serviloc.mission.application.dto.request.CreateDemandRequest;
 import com.serviloc.mission.application.dto.response.ApiResponse;
 import com.serviloc.mission.application.dto.response.DemandResponse;
@@ -61,6 +62,25 @@ public class ClientDemandController {
             @RequestHeader("X-User-Id") String clientId) {
 
         demandUseCase.cancelDemand(id, clientId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/demands/{id}/quote/accept")
+    public ResponseEntity<ApiResponse<Void>> acceptQuote(
+            @PathVariable String id,
+            @RequestHeader("X-User-Id") String clientId,
+            @Valid @RequestBody AcceptQuoteRequest request) {
+
+        demandUseCase.acceptQuote(id, clientId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/demands/{id}/quote/reject")
+    public ResponseEntity<ApiResponse<Void>> rejectQuote(
+            @PathVariable String id,
+            @RequestHeader("X-User-Id") String clientId) {
+
+        demandUseCase.rejectQuote(id, clientId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }
