@@ -1,4 +1,4 @@
-// MissionEventPublisher.java
+// infrastructure/messaging/MissionEventPublisher.java
 package com.serviloc.mission.infrastructure.messaging;
 
 import com.serviloc.mission.infrastructure.config.RabbitMQConfig;
@@ -27,8 +27,23 @@ public class MissionEventPublisher {
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_QUOTE_ACCEPTED, event);
     }
 
+    public void publishMissionStarted(Object event) {
+        log.info("Publication mission.started : {}", event);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_MISSION_STARTED, event);
+    }
+
+    public void publishMissionValidated(Object event) {
+        log.info("Publication mission.validated : {}", event);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_MISSION_VALIDATED, event);
+    }
+
     public void publishMissionCompleted(Object event) {
         log.info("Publication mission.completed : {}", event);
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_MISSION_COMPLETED, event);
+    }
+
+    public void publishEvaluationCreated(Object event) {
+        log.info("Publication evaluation.created : {}", event);
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_EVALUATION_CREATED, event);
     }
 }

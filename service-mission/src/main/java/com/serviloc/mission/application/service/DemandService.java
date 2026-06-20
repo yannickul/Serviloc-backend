@@ -4,6 +4,8 @@ package com.serviloc.mission.application.service;
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
 import com.serviloc.mission.application.dto.request.CreateDemandRequest;
 import com.serviloc.mission.application.dto.request.LocationDto;
+import com.serviloc.mission.domain.event.QuoteAcceptedEvent;
+import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
 import com.serviloc.mission.application.dto.response.DemandResponse;
 import com.serviloc.mission.application.dto.response.PagedResponse;
 import com.serviloc.mission.application.port.in.DemandUseCase;
@@ -143,6 +145,46 @@ public class DemandService implements DemandUseCase {
                 .collect(Collectors.toList());
 
         return PagedResponse.of(responses, page, limit, total);
+    }
+
+    @Override
+    public void rejectQuote(String demandId, String clientId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (!demand.getClientId().equals(clientId)) {
+            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
+        }
+
+        demand.setQuoteId(null);
+        demandRepository.save(demand);
+    }
+    @Override
+    public void acceptQuote(String demandId, String clientId, AcceptQuoteRequest request) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (!demand.getClientId().equals(clientId)) {
+            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
+        }
+
+        // Contrainte métier section 18.6 : pas d'acceptation si un devis est déjà accepté
+        if (demand.getQuoteId() != null) {
+            throw new IllegalStateException(
+                    "Un devis est déjà accepté pour la demande " + demandId);
+        }
+
+        demand.setQuoteId(request.getQuoteId());
+        demandRepository.save(demand);
+
+        eventPublisher.publishQuoteAccepted(new QuoteAcceptedEvent(
+                request.getQuoteId(),
+                demandId,
+                clientId,
+                demand.getProviderId(),
+                request.getPaymentMethod(),
+                request.getPhoneNumber()
+        ));
     }
 
     private DemandResponse toResponse(Demand demand) {

@@ -22,6 +22,7 @@ public class RabbitMQConfig {
     public static final String RK_MISSION_VALIDATED     = "mission.validated";
     public static final String RK_MISSION_COMPLETED     = "mission.completed";
     public static final String RK_EVALUATION_CREATED    = "evaluation.created";
+    public static final String RK_MISSION_STARTED       = "mission.started";
 
     // ===== QUEUES =====
     public static final String Q_PAYMENT_CONFIRMED  = "missions.payment.confirmed";
