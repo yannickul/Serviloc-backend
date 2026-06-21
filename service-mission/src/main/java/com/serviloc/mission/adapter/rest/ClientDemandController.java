@@ -8,6 +8,8 @@ import com.serviloc.mission.application.dto.response.DemandResponse;
 import com.serviloc.mission.application.dto.response.PagedResponse;
 import com.serviloc.mission.application.port.in.DemandUseCase;
 import com.serviloc.mission.domain.model.DemandStatus;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/client")
+@Tag(name = "Client", description = "Endpoints accessibles par les clients : demandes, missions, évaluations")
+@SecurityRequirement(name = "x-user-id")
+@SecurityRequirement(name = "x-user-role")
 public class ClientDemandController {
 
     private final DemandUseCase demandUseCase;
