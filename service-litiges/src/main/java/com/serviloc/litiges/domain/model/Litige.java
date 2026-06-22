@@ -22,6 +22,10 @@ public class Litige {
     private Resolution resolution; // null jusqu'à résolution
     private Instant createdAt;
     private Instant updatedAt;
+    private String transactionId;
+
+
+
 
     public Litige() {}
 
@@ -30,6 +34,7 @@ public class Litige {
     public String getReference()           { return reference; }
     public String getDemandId()            { return demandId; }
     public String getMissionId()           { return missionId; }
+    public String getTransactionId() { return transactionId; }
     public String getClientId()            { return clientId; }
     public String getProviderId()          { return providerId; }
     public String getAgentId()             { return agentId; }
@@ -47,6 +52,7 @@ public class Litige {
     public void setReference(String reference)         { this.reference = reference; }
     public void setDemandId(String demandId)           { this.demandId = demandId; }
     public void setMissionId(String missionId)         { this.missionId = missionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public void setClientId(String clientId)           { this.clientId = clientId; }
     public void setProviderId(String providerId)       { this.providerId = providerId; }
     public void setAgentId(String agentId)             { this.agentId = agentId; }

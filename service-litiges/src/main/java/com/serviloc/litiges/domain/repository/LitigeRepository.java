@@ -14,4 +14,5 @@ public interface LitigeRepository {
     long count(LitigeStatus status, String agentId);
     boolean existsByMissionIdAndStatus(String missionId, LitigeStatus status);
     List<Litige> findByMissionIdAndStatus(String missionId, LitigeStatus status);
+    Optional<Litige> findByTransactionIdAndStatus(String transactionId, LitigeStatus status);
 }

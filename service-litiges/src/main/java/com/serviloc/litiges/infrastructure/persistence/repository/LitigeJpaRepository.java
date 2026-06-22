@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface LitigeJpaRepository extends JpaRepository<LitigeJpaEntity, String> {
     boolean existsByMissionIdAndStatus(String missionId, LitigeStatus status);
@@ -15,4 +16,5 @@ public interface LitigeJpaRepository extends JpaRepository<LitigeJpaEntity, Stri
     Page<LitigeJpaEntity> findByStatusAndAgentId(LitigeStatus status, String agentId, Pageable pageable);
     Page<LitigeJpaEntity> findByStatus(LitigeStatus status, Pageable pageable);
     Page<LitigeJpaEntity> findByAgentId(String agentId, Pageable pageable);
+    Optional<LitigeJpaEntity> findByTransactionIdAndStatus(String transactionId, LitigeStatus status);
 }

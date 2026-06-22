@@ -16,6 +16,7 @@ public class LitigeJpaEntity {
     private String reference;
     private String demandId;
     private String missionId;
+    private String transactionId;
     private String clientId;
     private String providerId;
     private String agentId;
@@ -46,6 +47,7 @@ public class LitigeJpaEntity {
     public String getReference()         { return reference; }
     public String getDemandId()          { return demandId; }
     public String getMissionId()         { return missionId; }
+    public String getTransactionId() { return transactionId; }
     public String getClientId()          { return clientId; }
     public String getProviderId()        { return providerId; }
     public String getAgentId()           { return agentId; }
@@ -61,6 +63,7 @@ public class LitigeJpaEntity {
     public void setReference(String reference)        { this.reference = reference; }
     public void setDemandId(String demandId)          { this.demandId = demandId; }
     public void setMissionId(String missionId)        { this.missionId = missionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public void setClientId(String clientId)          { this.clientId = clientId; }
     public void setProviderId(String providerId)      { this.providerId = providerId; }
     public void setAgentId(String agentId)            { this.agentId = agentId; }
