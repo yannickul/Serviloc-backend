@@ -1,0 +1,55 @@
+server:
+  port: 8088
+  servlet:
+    context-path: /api/files
+
+spring:
+  application:
+    name: file-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5448/${POSTGRES_MEDIA_DB}
+    username: ${POSTGRES_MEDIA_USER}
+    password: ${POSTGRES_MEDIA_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+eureka:
+  client:
+    enabled: true
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://${EUREKA_HOSTNAME}:8761/eureka/
+
+  instance:
+    prefer-ip-address: true
+
+minio:
+  url: http://localhost:9000
+  access-key: ${MINIO_ROOT_USER}
+  secret-key: ${MINIO_ROOT_PASSWORD}
+  bucket: ${MINIO_BUCKET}
+
+security:
+  internal-token: ${INTERNAL_TOKEN}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha

@@ -33,10 +33,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-    defer-datasource-initialization: true   # ✅ important pour data.sql
+    defer-datasource-initialization: true
   sql:
     init:
-      mode: always                          # ✅ exécuter data.sql au démarrage
+      mode: always
 
 # =========================
 # Profil DOCKER
@@ -64,18 +64,18 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-    defer-datasource-initialization: true   # ✅ idem pour Docker
+    defer-datasource-initialization: true
   sql:
     init:
       mode: always
 
 # =========================
-# Config commune (Redis, Eureka, RabbitMQ, JWT, Logging)
+# Config commune (Redis, Eureka, RabbitMQ, JWT, Logging, Swagger)
 # =========================
 ---
 spring:
   redis:
-    host: ${REDIS_HOST:localhost}           # ✅ localhost par défaut en local
+    host: ${REDIS_HOST:redis}                # ✅ corrigé pour Docker
     port: ${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD:redis123}
     timeout: ${REDIS_TIMEOUT:20000}
@@ -83,7 +83,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}   # ✅ corrigé
     register-with-eureka: ${EUREKA_REGISTER:true}
     fetch-registry: ${EUREKA_FETCH:true}
   instance:
@@ -113,4 +113,12 @@ logging:
   level:
     org.hibernate.SQL: ${LOG_SQL_LEVEL:DEBUG}
     org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_BINDER_LEVEL:TRACE}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui/index.html
+    operationsSorter: method
+    tagsSorter: alpha
 
