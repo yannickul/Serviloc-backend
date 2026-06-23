@@ -82,7 +82,7 @@ public class AuthService {
         log.info("[AUTH] Inscription : userId={} email={}", saved.getId(), saved.getEmail());
 
         eventPublisher.publishUserRegistered(
-                saved.getId(), saved.getEmail(), saved.getRole().name());
+                saved.getId(), saved.getEmail(), saved.getRole().name(), saved.getPhone());
 
         return new RegisterResponse(
                 saved.getId().toString(),

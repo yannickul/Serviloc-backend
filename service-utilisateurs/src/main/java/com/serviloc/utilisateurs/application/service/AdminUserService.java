@@ -68,17 +68,18 @@ public class AdminUserService {
 
     // ─── PATCH /admin/users/:id/suspend ───────────────────────────
 
-    public SuspendResponse suspendUser(UUID userId, SuspendUserRequest request) {
+    public SuspendResponse suspendUser(UUID userId, SuspendUserRequest request, UUID suspendedBy) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
 
         user.suspend();
         userRepository.save(user);
 
-        eventPublisher.publishUserSuspended(userId, user.getEmail());
+        eventPublisher.publishUserSuspended(
+                userId, user.getEmail(), suspendedBy, "admin", null);
 
-        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={}",
-                userId, request.duration());
+        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={} suspendedBy={}",
+                userId, request.duration(), suspendedBy);
 
         return new SuspendResponse(
                 "usr_" + userId.toString().replace("-", "").substring(0, 8),
@@ -144,13 +145,13 @@ public class AdminUserService {
 
     // ─── POST /admin/providers/:id/validate ───────────────────────
 
-    public ProviderActionResponse validateProvider(UUID providerId) {
+    public ProviderActionResponse validateProvider(UUID providerId, UUID decidedBy) {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
-        eventPublisher.publishProviderValidated(providerId, user.getEmail());
+        eventPublisher.publishProviderValidated(providerId, user.getEmail(), decidedBy);
 
-        log.info("[ADMIN] Prestataire validé : userId={}", providerId);
+        log.info("[ADMIN] Prestataire validé : userId={} decidedBy={}", providerId, decidedBy);
 
         return new ProviderActionResponse(
                 "usr_" + providerId.toString().replace("-", "").substring(0, 8),
@@ -162,13 +163,14 @@ public class AdminUserService {
     // ─── POST /admin/providers/:id/reject ─────────────────────────
 
     public ProviderActionResponse rejectProvider(UUID providerId,
-                                                 RejectProviderRequest request) {
+                                                 RejectProviderRequest request,
+                                                 UUID decidedBy) {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
-        eventPublisher.publishProviderRejected(providerId, request.reason());
+        eventPublisher.publishProviderRejected(providerId, request.reason(), decidedBy);
 
-        log.info("[ADMIN] Prestataire rejeté : userId={}", providerId);
+        log.info("[ADMIN] Prestataire rejeté : userId={} decidedBy={}", providerId, decidedBy);
 
         return new ProviderActionResponse(
                 "usr_" + providerId.toString().replace("-", "").substring(0, 8),

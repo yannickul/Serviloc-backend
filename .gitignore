@@ -13,8 +13,8 @@
 jwt_private.pem
 jwt_public.pem
 
-# Fournir .env.example à la place (sans les vraies valeurs)
-# .env.example est commité — voir ce fichier pour la structure attendue
+# Fournir .env à la place (sans les vraies valeurs)
+# .env est commité — voir ce fichier pour la structure attendue
 
 # -----------------------------------------------------------------------------
 # Maven

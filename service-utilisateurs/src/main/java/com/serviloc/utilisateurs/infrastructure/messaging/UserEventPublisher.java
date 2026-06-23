@@ -23,29 +23,32 @@ public class UserEventPublisher {
 
     // ─── user.registered ─────────────────────────────────────────
 
-    public void publishUserRegistered(UUID userId, String email, String role) {
+    public void publishUserRegistered(UUID userId, String email, String role, String phone) {
         publish(RabbitMQConfig.RK_USER_REGISTERED, Map.of(
                 "userId", userId.toString(),
                 "email",  email,
-                "role",   role
+                "role",   role,
+                "phone",  phone
         ));
     }
 
     // ─── provider.validated ───────────────────────────────────────
 
-    public void publishProviderValidated(UUID providerId, String email) {
+    public void publishProviderValidated(UUID providerId, String email, UUID decidedBy) {
         publish(RabbitMQConfig.RK_PROVIDER_VALIDATED, Map.of(
                 "providerId", providerId.toString(),
-                "email",      email
+                "email",      email,
+                "decidedBy",  decidedBy.toString()
         ));
     }
 
     // ─── provider.rejected ────────────────────────────────────────
 
-    public void publishProviderRejected(UUID providerId, String reason) {
+    public void publishProviderRejected(UUID providerId, String reason, UUID decidedBy) {
         publish(RabbitMQConfig.RK_PROVIDER_REJECTED, Map.of(
                 "providerId", providerId.toString(),
-                "reason",     reason
+                "reason",     reason,
+                "decidedBy",  decidedBy.toString()
         ));
     }
 
@@ -70,11 +73,17 @@ public class UserEventPublisher {
 
     // ─── user.suspended ───────────────────────────────────────────
 
-    public void publishUserSuspended(UUID userId, String email) {
-        publish(RabbitMQConfig.RK_USER_SUSPENDED, Map.of(
-                "userId", userId.toString(),
-                "email",  email
-        ));
+    public void publishUserSuspended(UUID userId, String email, UUID suspendedBy,
+                                     String suspendedByRole, String litigeId) {
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("userId", userId.toString());
+        data.put("email", email);
+        data.put("suspendedBy", suspendedBy.toString());
+        data.put("suspendedByRole", suspendedByRole);
+        if (litigeId != null) {
+            data.put("litigeId", litigeId);
+        }
+        publish(RabbitMQConfig.RK_USER_SUSPENDED, data);
     }
 
     // ─── user.reactivated ─────────────────────────────────────────

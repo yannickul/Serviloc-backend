@@ -17,7 +17,7 @@
 #   docker compose ps                       # Statut de tous les services
 #   docker compose down -v                  # Arrête et supprime les volumes
 #
-# Pré-requis : fichier .env à la racine (voir .env.example)
+# Pré-requis : fichier .env à la racine (voir .env)
 # =============================================================================
 
 services:
