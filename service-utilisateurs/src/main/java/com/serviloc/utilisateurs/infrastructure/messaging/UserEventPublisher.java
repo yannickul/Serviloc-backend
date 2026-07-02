@@ -23,11 +23,12 @@ public class UserEventPublisher {
 
     // ─── user.registered ─────────────────────────────────────────
 
-    public void publishUserRegistered(UUID userId, String email, String role) {
+    public void publishUserRegistered(UUID userId, String email, String role, String otpCode) {
         publish(RabbitMQConfig.RK_USER_REGISTERED, Map.of(
-                "userId", userId.toString(),
-                "email",  email,
-                "role",   role
+                "userId",  userId.toString(),
+                "email",   email,
+                "role",    role,
+                "otpCode", otpCode != null ? otpCode : ""
         ));
     }
 

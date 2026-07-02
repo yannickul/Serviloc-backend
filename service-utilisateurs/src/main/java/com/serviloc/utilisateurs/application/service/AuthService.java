@@ -75,14 +75,15 @@ public class AuthService {
         User saved = userRepository.save(user);
 
         // OTP mock — code fixe 123456 en dev (S1)
+        String otpCode = "123456"; // dev — à remplacer par générateur aléatoire en prod
         otpRepository.deleteByUserId(saved.getId());
-        OtpCode otp = OtpCode.create(saved.getId(), "123456", 10);
+        OtpCode otp = OtpCode.create(saved.getId(), otpCode, 10);
         otpRepository.save(otp);
 
         log.info("[AUTH] Inscription : userId={} email={}", saved.getId(), saved.getEmail());
 
         eventPublisher.publishUserRegistered(
-                saved.getId(), saved.getEmail(), saved.getRole().name());
+                saved.getId(), saved.getEmail(), saved.getRole().name(), otpCode);
 
         return new RegisterResponse(
                 saved.getId().toString(),
