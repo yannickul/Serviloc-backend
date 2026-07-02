@@ -1,5 +1,5 @@
 server:
-  port: 8088
+  port: ${SERVER_PORT:8088}
   servlet:
     context-path: /api/files
 
@@ -8,14 +8,15 @@ spring:
     name: file-service
 
   datasource:
-    url: jdbc:postgresql://db-media:5432/filesdb
-    username: svc_media
-    password: svc_media
+    url: jdbc:postgresql://${POSTGRES_HOST:db-media}:${POSTGRES_PORT:5432}/${POSTGRES_DB:filesdb}
+    username: ${POSTGRES_USER:svc_media}
+    password: ${POSTGRES_PASSWORD:media_pass_2026}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
     properties:
       hibernate:
@@ -32,28 +33,28 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://${EUREKA_HOSTNAME}:8761/eureka/
+      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}
   instance:
     prefer-ip-address: true
 
 minio:
-  url: http://minio:9000
-  access-key: ${MINIO_ROOT_USER}
-  secret-key: ${MINIO_ROOT_PASSWORD}
-  bucket: ${MINIO_BUCKET}
+  url: ${MINIO_URL:http://minio:9000}
+  access-key: ${MINIO_ROOT_USER:minioadmin}
+  secret-key: ${MINIO_ROOT_PASSWORD:minioadmin123}
+  bucket: ${MINIO_BUCKET:serviloc-media}
 
 redis:
-  host: redis
-  port: 6379
+  host: ${REDIS_HOST:redis}
+  port: ${REDIS_PORT:6379}
 
 rabbitmq:
-  host: rabbitmq
-  port: 5672
-  username: guest
-  password: guest
+  host: ${RABBITMQ_HOST:rabbitmq}
+  port: ${RABBITMQ_PORT:5672}
+  username: ${RABBITMQ_USER:serviloc}
+  password: ${RABBITMQ_PASSWORD:serviloc}
 
 security:
-  internal-token: ${INTERNAL_TOKEN}
+  internal-token: ${INTERNAL_TOKEN:super-secret-token}
 
 springdoc:
   api-docs:
@@ -62,4 +63,13 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env
+  endpoint:
+    health:
+      show-details: always
 
