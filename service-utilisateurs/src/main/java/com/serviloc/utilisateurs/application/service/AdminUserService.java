@@ -166,7 +166,7 @@ public class AdminUserService {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
-        eventPublisher.publishProviderRejected(providerId, request.reason());
+        eventPublisher.publishProviderRejected(providerId, request.reason(), user.getEmail());
 
         log.info("[ADMIN] Prestataire rejeté : userId={}", providerId);
 

@@ -43,10 +43,11 @@ public class UserEventPublisher {
 
     // ─── provider.rejected ────────────────────────────────────────
 
-    public void publishProviderRejected(UUID providerId, String reason) {
+    public void publishProviderRejected(UUID providerId, String reason, String email) {
         publish(RabbitMQConfig.RK_PROVIDER_REJECTED, Map.of(
                 "providerId", providerId.toString(),
-                "reason",     reason
+                "reason",     reason,
+                "email",      email
         ));
     }
 
