@@ -96,7 +96,7 @@ public class UserEventPublisher {
                 "agentId",      agentId.toString(),
                 "email",        email,
                 "agentCode",    agentCode,
-                "tempPassword", tempPassword
+                "provisionalPassword", tempPassword
         ));
     }
     // ─── provider.review_submitted ────────────────────────────────

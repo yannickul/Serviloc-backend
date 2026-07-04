@@ -116,7 +116,7 @@ public class InternalPaymentController {
 
     private TransactionResponse toResponse(Transaction t) {
         return new TransactionResponse(
-                "txn_" + t.getId().toString().replace("-", "").substring(0, 8),
+                t.getId().toString(),
                 t.getDemandId().toString(),
                 t.getClientId().toString(),
                 t.getProviderId().toString(),

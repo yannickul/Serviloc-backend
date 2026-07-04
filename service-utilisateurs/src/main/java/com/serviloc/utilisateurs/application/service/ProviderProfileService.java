@@ -65,7 +65,7 @@ public class ProviderProfileService {
         log.info("[PROVIDER] Profil mis à jour : userId={}", userId);
 
         return new ProfileUpdatedResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 "Profil mis à jour avec succès"
         );
     }
@@ -84,7 +84,7 @@ public class ProviderProfileService {
                 userId, request.isAvailable());
 
         return new AvailabilityUpdatedResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 request.isAvailable(),
                 "Disponibilité mise à jour"
         );
@@ -108,7 +108,7 @@ public class ProviderProfileService {
         log.info("[PROVIDER] Horaires mis à jour : userId={}", userId);
 
         return new ScheduleUpdatedResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 "Horaires mis à jour avec succès"
         );
     }

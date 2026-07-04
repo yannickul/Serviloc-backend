@@ -191,11 +191,11 @@ public class ConversationService {
 
         // Stub participants — sera enrichi avec Feign Utilisateurs en S3
         ParticipantSummary clientSummary = new ParticipantSummary(
-                "usr_" + c.getClientId().toString().replace("-", "").substring(0, 8),
+                c.getClientId().toString(),
                 "Client", "", "Client", "C"
         );
         ParticipantSummary providerSummary = new ParticipantSummary(
-                "usr_" + c.getProviderId().toString().replace("-", "").substring(0, 8),
+                c.getProviderId().toString(),
                 "Prestataire", "", "Prestataire", "P"
         );
 

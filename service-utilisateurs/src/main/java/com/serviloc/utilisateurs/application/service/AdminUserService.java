@@ -81,7 +81,7 @@ public class AdminUserService {
                 userId, request.duration());
 
         return new SuspendResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 "suspended",
                 request.duration(),
                 request.reason()
@@ -153,7 +153,7 @@ public class AdminUserService {
         log.info("[ADMIN] Prestataire validé : userId={}", providerId);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "validated",
                 "Dossier validé. Le prestataire a été notifié."
         );
@@ -171,7 +171,7 @@ public class AdminUserService {
         log.info("[ADMIN] Prestataire rejeté : userId={}", providerId);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "rejected",
                 "Dossier rejeté. Le prestataire a été notifié."
         );
@@ -187,7 +187,7 @@ public class AdminUserService {
         eventPublisher.publishProviderNotified(providerId, user.getEmail(), request.message());
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "notified",
                 "Notification envoyée au prestataire."
         );
