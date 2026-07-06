@@ -82,7 +82,7 @@ public class AdminUserService {
                 userId, request.duration(), suspendedBy);
 
         return new SuspendResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 "suspended",
                 request.duration(),
                 request.reason()
@@ -154,7 +154,7 @@ public class AdminUserService {
         log.info("[ADMIN] Prestataire validé : userId={} decidedBy={}", providerId, decidedBy);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "validated",
                 "Dossier validé. Le prestataire a été notifié."
         );
@@ -168,12 +168,12 @@ public class AdminUserService {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
-        eventPublisher.publishProviderRejected(providerId, request.reason(), decidedBy);
+        eventPublisher.publishProviderRejected(providerId, request.reason(), user.getEmail());
 
         log.info("[ADMIN] Prestataire rejeté : userId={} decidedBy={}", providerId, decidedBy);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "rejected",
                 "Dossier rejeté. Le prestataire a été notifié."
         );
@@ -189,7 +189,7 @@ public class AdminUserService {
         eventPublisher.publishProviderNotified(providerId, user.getEmail(), request.message());
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "notified",
                 "Notification envoyée au prestataire."
         );

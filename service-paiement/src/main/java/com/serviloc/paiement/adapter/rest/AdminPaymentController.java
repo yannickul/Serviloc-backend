@@ -83,7 +83,7 @@ public class AdminPaymentController {
 
     private InternalPaymentController.TransactionResponse toResponse(Transaction t) {
         return new InternalPaymentController.TransactionResponse(
-                "txn_" + t.getId().toString().replace("-", "").substring(0, 8),
+                t.getId().toString(),
                 t.getDemandId().toString(),
                 t.getClientId().toString(),
                 t.getProviderId().toString(),

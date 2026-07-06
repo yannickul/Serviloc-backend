@@ -23,12 +23,12 @@ public class UserEventPublisher {
 
     // ─── user.registered ─────────────────────────────────────────
 
-    public void publishUserRegistered(UUID userId, String email, String role, String phone) {
+    public void publishUserRegistered(UUID userId, String email, String role, String otpCode) {
         publish(RabbitMQConfig.RK_USER_REGISTERED, Map.of(
-                "userId", userId.toString(),
-                "email",  email,
-                "role",   role,
-                "phone",  phone
+                "userId",  userId.toString(),
+                "email",   email,
+                "role",    role,
+                "otpCode", otpCode != null ? otpCode : ""
         ));
     }
 
@@ -44,11 +44,11 @@ public class UserEventPublisher {
 
     // ─── provider.rejected ────────────────────────────────────────
 
-    public void publishProviderRejected(UUID providerId, String reason, UUID decidedBy) {
+    public void publishProviderRejected(UUID providerId, String reason, String email) {
         publish(RabbitMQConfig.RK_PROVIDER_REJECTED, Map.of(
                 "providerId", providerId.toString(),
                 "reason",     reason,
-                "decidedBy",  decidedBy.toString()
+                "email",      email
         ));
     }
 
@@ -103,7 +103,7 @@ public class UserEventPublisher {
                 "agentId",      agentId.toString(),
                 "email",        email,
                 "agentCode",    agentCode,
-                "tempPassword", tempPassword
+                "provisionalPassword", tempPassword
         ));
     }
     // ─── provider.review_submitted ────────────────────────────────

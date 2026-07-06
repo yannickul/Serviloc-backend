@@ -63,8 +63,8 @@ public class ProviderPaymentController {
 
     private PayoutResponse toPayoutResponse(Payout p) {
         return new PayoutResponse(
-                "pyt_" + p.getId().toString().replace("-", "").substring(0, 8),
-                "txn_" + p.getTransactionId().toString().replace("-", "").substring(0, 8),
+                p.getId().toString(),
+                p.getTransactionId().toString(),
                 p.getAmount(),
                 p.getCommissionAmount(),
                 p.getStatus().name().toLowerCase(),

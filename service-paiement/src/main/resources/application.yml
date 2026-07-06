@@ -1,6 +1,12 @@
 server:
   port: 8084
 
+campay:
+  username: ${CAMPAY_USERNAME}
+  password: ${CAMPAY_PASSWORD}
+  env: ${CAMPAY_ENV:DEV}
+  base-url: https://demo.campay.net/api
+
 spring:
   application:
     name: service-paiement
