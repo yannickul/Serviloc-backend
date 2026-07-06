@@ -48,7 +48,7 @@ src/main/java/com/serviloc/notifications/
 ```bash
 # 1. Crée ton .env (jamais commité) avec les VRAIES valeurs DB_NAME/DB_USERNAME/DB_PASSWORD
 #    (= POSTGRES_NOTIFS_DB/USER/PASSWORD du docker-compose global — demande-les à l'équipe)
-cp .env.example .env
+cp .env .env
 
 # 2. Vérifie que la DB, Eureka et RabbitMQ tournent déjà (docker-compose racine du repo)
 docker ps

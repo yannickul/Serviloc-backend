@@ -99,13 +99,6 @@
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- Resend — envoi d'emails transactionnels -->
-        <dependency>
-            <groupId>com.resend</groupId>
-            <artifactId>resend-java</artifactId>
-            <version>3.1.0</version>
-        </dependency>
-
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

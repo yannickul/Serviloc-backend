@@ -95,7 +95,7 @@ public class AdminAgentService {
     }
     // ─── PATCH /admin/agents/:id/suspend ──────────────────────────
 
-    public SuspendResponse suspendAgent(UUID agentUserId, SuspendUserRequest request) {
+    public SuspendResponse suspendAgent(UUID agentUserId, SuspendUserRequest request, UUID suspendedBy) {
         User user = userRepository.findById(agentUserId)
                 .orElseThrow(() -> new UserNotFoundException("Agent introuvable"));
 
@@ -106,9 +106,11 @@ public class AdminAgentService {
         user.suspend();
         userRepository.save(user);
 
-        eventPublisher.publishUserSuspended(agentUserId, user.getEmail());
+        eventPublisher.publishUserSuspended(
+                agentUserId, user.getEmail(), suspendedBy, "admin", null);
 
-        log.info("[ADMIN] Agent suspendu : userId={} reason={}", agentUserId, request.reason());
+        log.info("[ADMIN] Agent suspendu : userId={} reason={} suspendedBy={}",
+                agentUserId, request.reason(), suspendedBy);
 
         return new SuspendResponse(
                 UserIdFormatter.formatUserId(agentUserId),

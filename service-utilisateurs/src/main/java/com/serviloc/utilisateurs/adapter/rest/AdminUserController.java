@@ -42,8 +42,10 @@ public class AdminUserController {
     @Operation(summary = "Suspension d'un utilisateur")
     public ResponseEntity<ApiResponse<SuspendResponse>> suspendUser(
             @PathVariable UUID id,
+            @RequestHeader("X-User-Id") String adminUserId,
             @Valid @RequestBody SuspendUserRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminUserService.suspendUser(id, request)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminUserService.suspendUser(id, request, UUID.fromString(adminUserId))));
     }
 
     // ─── PATCH /admin/users/:id/reactivate ────────────────────────
@@ -81,8 +83,10 @@ public class AdminUserController {
     @PostMapping("/admin/providers/{id}/validate")
     @Operation(summary = "Validation du dossier prestataire")
     public ResponseEntity<ApiResponse<ProviderActionResponse>> validateProvider(
-            @PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(adminUserService.validateProvider(id)));
+            @PathVariable UUID id,
+            @RequestHeader("X-User-Id") String adminUserId) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminUserService.validateProvider(id, UUID.fromString(adminUserId))));
     }
 
     // ─── POST /admin/providers/:id/reject ─────────────────────────
@@ -91,9 +95,10 @@ public class AdminUserController {
     @Operation(summary = "Rejet du dossier prestataire")
     public ResponseEntity<ApiResponse<ProviderActionResponse>> rejectProvider(
             @PathVariable UUID id,
+            @RequestHeader("X-User-Id") String adminUserId,
             @Valid @RequestBody RejectProviderRequest request) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(adminUserService.rejectProvider(id, request)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminUserService.rejectProvider(id, request, UUID.fromString(adminUserId))));
     }
 
     // ─── POST /admin/providers/:id/notify ─────────────────────────

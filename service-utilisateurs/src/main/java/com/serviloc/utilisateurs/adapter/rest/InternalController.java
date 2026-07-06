@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.serviloc.utilisateurs.infrastructure.messaging.UserEventPublisher;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,11 +32,14 @@ public class InternalController {
 
     private final UserRepository userRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final UserEventPublisher eventPublisher;
 
     public InternalController(UserRepository userRepository,
-                              ProviderProfileRepository providerProfileRepository) {
+                              ProviderProfileRepository providerProfileRepository,
+                              UserEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.providerProfileRepository = providerProfileRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     // ─── GET /internal/providers ──────────────────────────────────
@@ -99,6 +103,13 @@ public class InternalController {
         user.suspend();
         userRepository.save(user);
 
+        eventPublisher.publishUserSuspended(
+                id, user.getEmail(),
+                UUID.fromString(request.suspendedById()),
+                request.suspendedByRole(),
+                request.litigeId()
+        );
+
         log.info("[INTERNAL] Suspension : userId={} litigeId={} by={}",
                 id, request.litigeId(), request.suspendedByRole());
 
@@ -132,8 +143,9 @@ public class InternalController {
     public record SuspendInternalRequest(
             @NotBlank String reason,
             @NotNull String litigeId,
-            @NotBlank String duration,        // "24h" | "7d" | "indefinite"
-            @NotBlank String suspendedByRole  // "agent" | "admin"
+            @NotBlank String duration,
+            @NotBlank String suspendedByRole,
+            @NotNull String suspendedById      // UUID de l'agent/admin qui a déclenché la suspension
     ) {}
 
     public record SuspendInternalResponse(

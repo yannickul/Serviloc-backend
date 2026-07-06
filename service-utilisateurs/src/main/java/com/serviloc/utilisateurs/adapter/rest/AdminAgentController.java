@@ -48,8 +48,10 @@ public class AdminAgentController {
     @Operation(summary = "Suspendre un agent")
     public ResponseEntity<ApiResponse<SuspendResponse>> suspendAgent(
             @PathVariable UUID id,
+            @RequestHeader("X-User-Id") String adminUserId,
             @Valid @RequestBody SuspendUserRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(adminAgentService.suspendAgent(id, request)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                adminAgentService.suspendAgent(id, request, UUID.fromString(adminUserId))));
     }
 
 // ─── DELETE /admin/agents/:id ──────────────────────────────────

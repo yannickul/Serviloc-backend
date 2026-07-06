@@ -70,14 +70,10 @@ serviloc:
     enabled: ${FCM_ENABLED:true}
     credentials-path: ${FCM_CREDENTIALS_PATH:firebase-service-account.json}
 
-  email:
-    provider: resend
-    api-key: ${RESEND_API_KEY:}
-    # Expéditeur : domaine vérifié dans ton compte Resend.
-    # En sandbox sans domaine vérifié, utilise "onboarding@resend.dev"
-    # (Resend permet d'envoyer vers ta propre adresse avec cet expéditeur).
-    from: ${EMAIL_FROM:onboarding@resend.dev}
-    from-name: ${EMAIL_FROM_NAME:ServiLoc}
+  sms:
+    provider: ${SMS_PROVIDER:sandbox}
+    api-key: ${SMS_API_KEY:}
+    sender-id: ${SMS_SENDER_ID:ServiLoc}
 
 springdoc:
   swagger-ui:

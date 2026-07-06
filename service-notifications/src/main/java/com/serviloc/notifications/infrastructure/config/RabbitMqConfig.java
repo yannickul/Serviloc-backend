@@ -1,6 +1,5 @@
 package com.serviloc.notifications.infrastructure.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Declarables;
@@ -8,8 +7,6 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -43,30 +40,7 @@ public class RabbitMqConfig {
 
     @Bean
     public MessageConverter jsonMessageConverter() {
-        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
-        // Par défaut, Jackson2JsonMessageConverter vérifie le header "content_type".
-        // En l'absence de ce header (publications depuis Management UI, ou certains services
-        // qui ne le positionnent pas), le converter lève une exception et le message part en DLQ.
-        // La solution : forcer le type cible à Map pour que Jackson tente toujours la désérialisation JSON.
-        converter.setDefaultCharset("UTF-8");
-        converter.setClassMapper(new org.springframework.amqp.support.converter.DefaultClassMapper() {{
-            setTrustedPackages("*");
-        }});
-        return converter;
-    }
-
-    /**
-     * Container factory explicite qui impose le converter JSON à tous les @RabbitListener
-     * du service — garantit que les messages sans header content_type sont bien traités comme JSON.
-     */
-    @Bean
-    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory,
-            MessageConverter jsonMessageConverter) {
-        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
-        factory.setConnectionFactory(connectionFactory);
-        factory.setMessageConverter(jsonMessageConverter);
-        return factory;
+        return new Jackson2JsonMessageConverter();
     }
 
     @Bean
