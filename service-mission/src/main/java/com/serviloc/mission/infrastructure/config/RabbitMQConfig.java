@@ -15,23 +15,29 @@ public class RabbitMQConfig {
     public static final String EXCHANGE = "serviloc.events";
 
     // ===== ROUTING KEYS =====
-    public static final String RK_DEMAND_PUBLISHED      = "demand.published";
-    public static final String RK_QUOTE_ACCEPTED        = "negotiation.quote_accepted";
-    public static final String RK_PAYMENT_CONFIRMED     = "payment.confirmed";
-    public static final String RK_PAYMENT_FAILED        = "payment.failed";
-    public static final String RK_MISSION_VALIDATED     = "mission.validated";
-    public static final String RK_MISSION_COMPLETED     = "mission.completed";
-    public static final String RK_EVALUATION_CREATED    = "evaluation.created";
-    public static final String RK_MISSION_STARTED       = "mission.started";
+    public static final String RK_DEMAND_PUBLISHED = "demand.published";
+    public static final String RK_QUOTE_ACCEPTED = "negotiation.quote_accepted";
+    public static final String RK_PAYMENT_CONFIRMED = "payment.confirmed";
+    public static final String RK_PAYMENT_FAILED = "payment.failed";
+    public static final String RK_MISSION_VALIDATED = "mission.validated";
+    public static final String RK_MISSION_COMPLETED = "mission.completed";
+    public static final String RK_EVALUATION_CREATED = "evaluation.created";
+    public static final String RK_MISSION_STARTED = "mission.started";
+    public static final String RK_RATING_UPDATE_PENDING = "rating.update.pending";
+
+    ;
+
 
     // ===== QUEUES =====
-    public static final String Q_PAYMENT_CONFIRMED  = "missions.payment.confirmed";
-    public static final String Q_PAYMENT_FAILED     = "missions.payment.failed";
+    public static final String Q_PAYMENT_CONFIRMED = "missions.payment.confirmed";
+    public static final String Q_PAYMENT_FAILED = "missions.payment.failed";
+    public static final String Q_RATING_UPDATE_PENDING = "missions.rating.update.pending";
 
     // ===== DLQ =====
     public static final String DLQ_PAYMENT_CONFIRMED = "missions.payment.confirmed.dlq";
-    public static final String DLQ_PAYMENT_FAILED    = "missions.payment.failed.dlq";
-    public static final String DLX                   = "serviloc.dlx";
+    public static final String DLQ_PAYMENT_FAILED = "missions.payment.failed.dlq";
+    public static final String DLQ_RATING_UPDATE_PENDING = "missions.rating.update.pending.dlq";
+    public static final String DLX = "serviloc.dlx";
 
     // ===== EXCHANGE PRINCIPAL =====
     @Bean
@@ -62,6 +68,15 @@ public class RabbitMQConfig {
                 .build();
     }
 
+    @Bean
+    public Queue ratingUpdatePendingQueue() {
+        return QueueBuilder.durable(Q_RATING_UPDATE_PENDING)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", DLQ_RATING_UPDATE_PENDING)
+                .build();
+    }
+
+
     // ===== DLQ =====
     @Bean
     public Queue paymentConfirmedDlq() {
@@ -71,6 +86,11 @@ public class RabbitMQConfig {
     @Bean
     public Queue paymentFailedDlq() {
         return QueueBuilder.durable(DLQ_PAYMENT_FAILED).build();
+    }
+
+    @Bean
+    public Queue ratingUpdatePendingDlq() {
+        return QueueBuilder.durable(DLQ_RATING_UPDATE_PENDING).build();
     }
 
     // ===== BINDINGS =====
@@ -106,6 +126,23 @@ public class RabbitMQConfig {
                 .with(DLQ_PAYMENT_FAILED);
     }
 
+    @Bean
+    public Binding bindRatingUpdatePending() {
+        return BindingBuilder
+                .bind(ratingUpdatePendingQueue())
+                .to(servilocExchange())
+                .with(RK_RATING_UPDATE_PENDING);
+    }
+
+    @Bean
+    public Binding bindDlqRatingUpdatePending() {
+        return BindingBuilder
+                .bind(ratingUpdatePendingDlq())
+                .to(deadLetterExchange())
+                .with(DLQ_RATING_UPDATE_PENDING);
+    }
+
+
     // ===== SÉRIALISATION JSON =====
     @Bean
     public Jackson2JsonMessageConverter messageConverter() {
@@ -123,3 +160,6 @@ public class RabbitMQConfig {
         return factory;
     }
 }
+
+
+

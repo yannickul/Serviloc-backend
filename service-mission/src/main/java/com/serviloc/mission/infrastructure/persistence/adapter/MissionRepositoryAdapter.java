@@ -60,6 +60,18 @@ public class MissionRepositoryAdapter implements MissionRepository {
         return jpaRepository.countByStatus(status.name());
     }
 
+    @Override
+    public long countTotalByUserId(String userId) {
+        return jpaRepository.countByClientIdOrProviderId(userId, userId);
+    }
+
+    @Override
+    public long countCompletedByUserId(String userId) {
+        String status = MissionStatus.TERMINEE.name();
+        return jpaRepository.countByClientIdAndStatus(userId, status)
+                + jpaRepository.countByProviderIdAndStatus(userId, status);
+    }
+
     private MissionJpaEntity toEntity(Mission mission) {
         MissionJpaEntity entity = new MissionJpaEntity();
         entity.setId(mission.getId());

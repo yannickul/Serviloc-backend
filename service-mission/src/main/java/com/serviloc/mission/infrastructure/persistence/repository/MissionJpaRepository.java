@@ -11,4 +11,7 @@ public interface MissionJpaRepository extends JpaRepository<MissionJpaEntity, St
     List<MissionJpaEntity> findByProviderId(String providerId);
     List<MissionJpaEntity> findByStatus(String status);
     long countByStatus(String name);
+    long countByClientIdOrProviderId(String clientId, String providerId);
+    long countByClientIdAndStatus(String clientId, String status);
+    long countByProviderIdAndStatus(String providerId, String status);
 }
