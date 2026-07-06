@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 public interface TransactionRepository {
     Transaction save(Transaction transaction);
@@ -15,6 +16,7 @@ public interface TransactionRepository {
     Optional<Transaction> findByQuoteId(UUID quoteId);
     Optional<Transaction> findByDemandId(UUID demandId);
     Page<Transaction> findByStatus(TransactionStatus status, Pageable pageable);
+    List<Transaction> findByClientIdAndStatus(UUID clientId, TransactionStatus status);
     double sumAmountByProviderIdAndCreatedAtBetween(UUID providerId,
                                                     LocalDateTime from,
                                                     LocalDateTime to);

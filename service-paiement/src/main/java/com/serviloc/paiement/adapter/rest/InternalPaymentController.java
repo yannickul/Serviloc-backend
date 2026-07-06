@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping("/internal")
@@ -82,6 +83,18 @@ public class InternalPaymentController {
         LocalDateTime fromDate = LocalDateTime.parse(from, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         LocalDateTime toDate   = LocalDateTime.parse(to,   DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         return ResponseEntity.ok(paymentService.getFinancialStats(fromDate, toDate));
+    }
+
+    @GetMapping("/transactions/client/{clientId}/pending")
+    @Operation(summary = "Transactions en séquestre d'un client")
+    public ResponseEntity<List<TransactionResponse>> getPendingTransactions(
+            @PathVariable UUID clientId) {
+        return ResponseEntity.ok(
+                paymentService.getPendingTransactionsByClient(clientId)
+                        .stream()
+                        .map(this::toResponse)
+                        .toList()
+        );
     }
 
     // ─── DTOs ─────────────────────────────────────────────────────

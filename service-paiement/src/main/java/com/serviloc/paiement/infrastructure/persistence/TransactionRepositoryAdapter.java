@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Component
 public class TransactionRepositoryAdapter implements TransactionRepository {
@@ -69,6 +70,12 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public long countByStatus(TransactionStatus status) {
         return jpa.countByStatus(status);
+    }
+
+    @Override
+    public List<Transaction> findByClientIdAndStatus(UUID clientId, TransactionStatus status) {
+        return jpa.findByClientIdAndStatus(clientId, status)
+                .stream().map(this::toDomain).toList();
     }
 
     private Transaction toDomain(TransactionJpaEntity e) {

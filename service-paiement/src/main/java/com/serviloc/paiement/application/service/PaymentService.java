@@ -245,6 +245,14 @@ public class PaymentService {
         return commissionConfigRepository.save(config);
     }
 
+    // ─── GET /internal/transactions/client/:clientId/pending ──────
+
+    @Transactional(readOnly = true)
+    public List<Transaction> getPendingTransactionsByClient(UUID clientId) {
+        return transactionRepository.findByClientIdAndStatus(
+                clientId, TransactionStatus.SEQUESTRE);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────
 
     private double getCommissionRate() {

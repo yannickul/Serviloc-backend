@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Repository
 public interface TransactionJpaRepository
@@ -19,6 +20,7 @@ public interface TransactionJpaRepository
     Optional<TransactionJpaEntity> findByQuoteId(UUID quoteId);
     Optional<TransactionJpaEntity> findByDemandId(UUID demandId);
     Page<TransactionJpaEntity> findByStatus(TransactionStatus status, Pageable pageable);
+    List<TransactionJpaEntity> findByClientIdAndStatus(UUID clientId, TransactionStatus status);
     long countByStatus(TransactionStatus status);
 
     @Query("""
