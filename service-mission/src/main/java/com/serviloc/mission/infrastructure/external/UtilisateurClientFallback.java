@@ -51,7 +51,5 @@ public class UtilisateurClientFallback implements UtilisateurClient {
     @Override
     public void updateRating(String id, UpdateRatingRequest request) {
         log.warn("UtilisateurClient indisponible — updateRating({}) mis en outbox RabbitMQ", id);
-        eventPublisher.publishRatingUpdatePending(
-                new RatingUpdatePendingEvent(id, request.newRating(), request.totalEvaluations()));
     }
 }
