@@ -5,6 +5,7 @@ import com.serviloc.mission.application.dto.request.CreateLitigeRequest;
 import com.serviloc.mission.application.dto.request.LocationDto;
 import com.serviloc.mission.application.dto.request.RateMissionRequest;
 import com.serviloc.mission.application.dto.response.MissionResponse;
+import com.serviloc.mission.application.dto.response.UserMissionStatsResponse;
 import com.serviloc.mission.application.port.in.MissionUseCase;
 import com.serviloc.mission.domain.event.*;
 import com.serviloc.mission.domain.exception.DoubleValidationAlreadyDoneException;
@@ -222,7 +223,6 @@ public class MissionService implements MissionUseCase {
         );
     }
 
-    // Tâche 7a — POST /client/missions/:id/rate
     @Override
     public void rateAsClient(String missionId, String clientId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
@@ -232,7 +232,6 @@ public class MissionService implements MissionUseCase {
             throw new UnauthorizedMissionAccessException(clientId, missionId, "mission");
         }
 
-        // Contrainte métier section 18.3
         if (mission.getStatus() != MissionStatus.TERMINEE) {
             throw new IllegalStateException(
                     "Impossible de noter une mission qui n'est pas TERMINEE");
@@ -242,15 +241,20 @@ public class MissionService implements MissionUseCase {
                 missionId, clientId, mission.getProviderId(), "PROVIDER", request);
         evaluationRepository.save(evaluation);
 
+        List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getProviderId());
+        double average = evaluations.stream()
+                .mapToInt(e -> e.getRating())
+                .average()
+                .orElse(request.getRating().doubleValue());
+
         utilisateurClient.updateRating(
                 mission.getProviderId(),
-                new UpdateRatingRequest(request.getRating().doubleValue(), 0));
+                new UpdateRatingRequest(average, evaluations.size()));
 
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getProviderId(), "PROVIDER", request.getRating()));
     }
 
-    // Tâche 7b — POST /provider/missions/:id/rate
     @Override
     public void rateAsProvider(String missionId, String providerId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
@@ -269,14 +273,19 @@ public class MissionService implements MissionUseCase {
                 missionId, providerId, mission.getClientId(), "CLIENT", request);
         evaluationRepository.save(evaluation);
 
+        List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getClientId());
+        double average = evaluations.stream()
+                .mapToInt(e -> e.getRating())
+                .average()
+                .orElse(request.getRating().doubleValue());
+
         utilisateurClient.updateRating(
                 mission.getClientId(),
-                new UpdateRatingRequest(request.getRating().doubleValue(), 0));
+                new UpdateRatingRequest(average, evaluations.size()));
 
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getClientId(), "CLIENT", request.getRating()));
     }
-
     // Tâche 8a — POST /client/missions/:id/litige
     @Override
     public void declareLitigeAsClient(String missionId, String clientId, CreateLitigeRequest request) {
@@ -314,6 +323,13 @@ public class MissionService implements MissionUseCase {
 
         mission.setStatus(MissionStatus.LITIGE);
         missionRepository.save(mission);
+    }
+
+    @Transactional(readOnly = true)
+    public UserMissionStatsResponse getMissionStatsForUser(String userId) {
+        long total = missionRepository.countTotalByUserId(userId);
+        long completed = missionRepository.countCompletedByUserId(userId);
+        return new UserMissionStatsResponse(userId, completed, total);
     }
 
     private Evaluation buildEvaluation(

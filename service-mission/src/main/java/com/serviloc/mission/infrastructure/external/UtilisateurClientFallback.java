@@ -3,6 +3,8 @@ package com.serviloc.mission.infrastructure.external;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.serviloc.mission.domain.event.RatingUpdatePendingEvent;
+import com.serviloc.mission.infrastructure.messaging.MissionEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +20,7 @@ public class UtilisateurClientFallback implements UtilisateurClient {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final MissionEventPublisher eventPublisher;
 
     // Clé construite à partir des paramètres de recherche, stockée par le vrai client au retour normal
     // Format : "providers:lat:lng:radiusKm:specialty"
@@ -47,8 +50,8 @@ public class UtilisateurClientFallback implements UtilisateurClient {
 
     @Override
     public void updateRating(String id, UpdateRatingRequest request) {
-        log.warn("UtilisateurClient indisponible — updateRating({}) perdu", id);
-        // Pas de compensation ici. L'évaluation est déjà en base.
-        // TODO S3 : stocker dans une outbox pour retry ultérieur
+        log.warn("UtilisateurClient indisponible — updateRating({}) mis en outbox RabbitMQ", id);
+        eventPublisher.publishRatingUpdatePending(
+                new RatingUpdatePendingEvent(id, request.newRating(), request.totalEvaluations()));
     }
 }

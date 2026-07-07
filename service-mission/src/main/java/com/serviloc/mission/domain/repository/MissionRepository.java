@@ -15,4 +15,6 @@ public interface MissionRepository {
     List<Mission> findByStatus(MissionStatus status);
     long countAll();
     long countByStatus(MissionStatus status);
+    long countTotalByUserId(String userId);
+    long countCompletedByUserId(String userId);
 }

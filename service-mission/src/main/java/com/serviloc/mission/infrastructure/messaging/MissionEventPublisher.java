@@ -1,6 +1,7 @@
 // infrastructure/messaging/MissionEventPublisher.java
 package com.serviloc.mission.infrastructure.messaging;
 
+import com.serviloc.mission.domain.event.RatingUpdatePendingEvent;
 import com.serviloc.mission.infrastructure.config.RabbitMQConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,5 +46,13 @@ public class MissionEventPublisher {
     public void publishEvaluationCreated(Object event) {
         log.info("Publication evaluation.created : {}", event);
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, RabbitMQConfig.RK_EVALUATION_CREATED, event);
+    }
+
+    public void publishRatingUpdatePending(RatingUpdatePendingEvent event) {
+        log.warn("Publication rating.update.pending (fallback outbox) : {}", event);
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE,
+                RabbitMQConfig.RK_RATING_UPDATE_PENDING,
+                event);
     }
 }
