@@ -21,6 +21,7 @@ import com.serviloc.mission.infrastructure.persistence.entity.MissionValidationJ
 import com.serviloc.mission.infrastructure.persistence.repository.MissionValidationJpaRepository;
 import com.serviloc.mission.infrastructure.persistence.repository.MissionStepJpaRepository;
 import com.serviloc.mission.application.port.out.PaymentPort;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 public class MissionService implements MissionUseCase {
@@ -247,10 +249,16 @@ public class MissionService implements MissionUseCase {
                 .average()
                 .orElse(request.getRating().doubleValue());
 
-        utilisateurClient.updateRating(
-                mission.getProviderId(),
-                new UpdateRatingRequest(average, evaluations.size()));
-
+        try {
+            utilisateurClient.updateRating(
+                    mission.getProviderId(),
+                    new UpdateRatingRequest(average, evaluations.size()));
+        } catch (Exception e) {
+            log.warn("updateRating indisponible pour {} — bascule sur outbox RabbitMQ", mission.getProviderId());
+            eventPublisher.publishRatingUpdatePending(
+                    new RatingUpdatePendingEvent(
+                            mission.getProviderId(), average, evaluations.size()));
+        }
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getProviderId(), "PROVIDER", request.getRating()));
     }
@@ -279,9 +287,16 @@ public class MissionService implements MissionUseCase {
                 .average()
                 .orElse(request.getRating().doubleValue());
 
-        utilisateurClient.updateRating(
-                mission.getClientId(),
-                new UpdateRatingRequest(average, evaluations.size()));
+        try {
+            utilisateurClient.updateRating(
+                    mission.getClientId(),
+                    new UpdateRatingRequest(average, evaluations.size()));
+        } catch (Exception e) {
+            log.warn("updateRating indisponible pour {} — bascule sur outbox RabbitMQ", mission.getClientId());
+            eventPublisher.publishRatingUpdatePending(
+                    new RatingUpdatePendingEvent(
+                            mission.getClientId(), average, evaluations.size()));
+        }
 
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getClientId(), "CLIENT", request.getRating()));
