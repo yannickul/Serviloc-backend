@@ -47,6 +47,9 @@ management:
       exposure:
         include: "health,info"
 
+internal:
+  token: ${INTERNAL_TOKEN}
+
 logging:
   #pattern:
     #console: "%d{HH:mm:ss.SSS} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"

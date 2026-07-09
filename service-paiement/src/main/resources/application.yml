@@ -81,6 +81,9 @@ management:
     health:
       show-details: always
 
+internal:
+  token: ${INTERNAL_TOKEN}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
