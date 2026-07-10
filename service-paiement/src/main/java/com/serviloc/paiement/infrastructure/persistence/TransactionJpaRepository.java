@@ -44,4 +44,13 @@ public interface TransactionJpaRepository
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.amount), 0) FROM TransactionJpaEntity t
+    WHERE t.clientId = :clientId AND t.status = :status
+    """)
+    double sumAmountByClientIdAndStatus(
+            @Param("clientId") UUID clientId,
+            @Param("status") TransactionStatus status
+    );
 }

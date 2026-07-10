@@ -86,15 +86,19 @@ public class InternalPaymentController {
     }
 
     @GetMapping("/transactions/client/{clientId}/pending")
-    @Operation(summary = "Transactions en séquestre d'un client")
-    public ResponseEntity<List<TransactionResponse>> getPendingTransactions(
+    @Operation(summary = "Transactions en séquestre + totalSpent d'un client")
+    public ResponseEntity<ClientTransactionSummary> getClientTransactionSummary(
             @PathVariable UUID clientId) {
-        return ResponseEntity.ok(
-                paymentService.getPendingTransactionsByClient(clientId)
-                        .stream()
-                        .map(this::toResponse)
-                        .toList()
-        );
+
+        List<TransactionResponse> pending = paymentService
+                .getPendingTransactionsByClient(clientId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        double totalSpent = paymentService.getTotalSpentByClient(clientId);
+
+        return ResponseEntity.ok(new ClientTransactionSummary(totalSpent, pending));
     }
 
     // ─── DTOs ─────────────────────────────────────────────────────
@@ -144,4 +148,8 @@ public class InternalPaymentController {
                         : null
         );
     }
+    public record ClientTransactionSummary(
+            double totalSpent,
+            List<TransactionResponse> pendingTransactions
+    ) {}
 }

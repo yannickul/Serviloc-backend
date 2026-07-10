@@ -5,6 +5,11 @@ spring:
   application:
     name: service-utilisateurs
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5441/${POSTGRES_USER_DB}
     username: ${POSTGRES_USER_USER}

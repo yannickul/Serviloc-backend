@@ -3,7 +3,8 @@ package com.serviloc.utilisateurs.application.dto;
 import com.serviloc.utilisateurs.domain.model.User;
 
 import java.time.format.DateTimeFormatter;
-
+import com.serviloc.utilisateurs.application.service.ProfileEnrichmentService;
+import java.util.List;
 /**
  * Convertit les entités domaine en DTOs de réponse conformes au contrat API v2.0.
  */
@@ -133,6 +134,69 @@ public final class UserResponseMapper {
                 agentCode,
                 department,
                 assignedLitigesCount,
+                formatDate(user)
+        );
+    }
+    // ─── ClientProfile enrichi ────────────────────────────────────
+
+    public static ProfileDtos.ClientProfileResponse toClientProfile(
+            User user,
+            ProfileEnrichmentService.ClientEnrichment enrichment) {
+
+        List<ProfileDtos.PendingPayment> pendingPayments = enrichment.pendingPayments()
+                .stream()
+                .map(p -> new ProfileDtos.PendingPayment(p.amount(), p.missionLabel()))
+                .toList();
+
+        return new ProfileDtos.ClientProfileResponse(
+                user.getId().toString(),
+                "client",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                enrichment.totalSpent(),
+                enrichment.completedMissions(),
+                pendingPayments,
+                null,
+                formatDate(user)
+        );
+    }
+
+// ─── ProviderProfile enrichi ──────────────────────────────────
+
+    public static ProfileDtos.ProviderProfileResponse toProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile,
+            ProfileEnrichmentService.ProviderEnrichment enrichment) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        return new ProfileDtos.ProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                enrichment.completedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                enrichment.monthlyEarnings(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
                 formatDate(user)
         );
     }

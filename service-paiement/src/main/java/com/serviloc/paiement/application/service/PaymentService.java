@@ -253,6 +253,12 @@ public class PaymentService {
                 clientId, TransactionStatus.SEQUESTRE);
     }
 
+    @Transactional(readOnly = true)
+    public double getTotalSpentByClient(UUID clientId) {
+        return transactionRepository.sumAmountByClientIdAndStatus(
+                clientId, TransactionStatus.LIBERE);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────
 
     private double getCommissionRate() {

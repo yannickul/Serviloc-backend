@@ -98,4 +98,9 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
             throw new RuntimeException("Erreur reconstitution Transaction", ex);
         }
     }
+
+    @Override
+    public double sumAmountByClientIdAndStatus(UUID clientId, TransactionStatus status) {
+        return jpa.sumAmountByClientIdAndStatus(clientId, status);
+    }
 }

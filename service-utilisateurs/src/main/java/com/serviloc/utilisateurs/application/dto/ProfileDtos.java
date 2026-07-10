@@ -58,8 +58,8 @@ public final class ProfileDtos {
     // ─── ClientProfileResponse ────────────────────────────────────
 
     public record ClientProfileResponse(
-            String id,              // usr_abc123
-            String role,            // "client"
+            String id,
+            String role,
             String firstName,
             String lastName,
             String fullName,
@@ -69,8 +69,8 @@ public final class ProfileDtos {
             String status,
             double totalSpent,
             int completedMissions,
-            PendingPayment pendingPayment,   // null si aucun
-            Location location,               // null si non renseigné
+            List<PendingPayment> pendingPayments,
+            Location location,
             String createdAt
     ) {}
 
