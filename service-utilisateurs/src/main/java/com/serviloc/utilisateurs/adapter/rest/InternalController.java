@@ -18,6 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.serviloc.utilisateurs.domain.model.UserRole;
+import com.serviloc.utilisateurs.infrastructure.persistence.UserJpaRepository;
+import com.serviloc.utilisateurs.infrastructure.messaging.UserEventPublisher;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,11 +34,17 @@ public class InternalController {
 
     private final UserRepository userRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final UserEventPublisher eventPublisher;
+    private final UserJpaRepository userJpaRepository;
 
     public InternalController(UserRepository userRepository,
-                              ProviderProfileRepository providerProfileRepository) {
+                              ProviderProfileRepository providerProfileRepository,
+                              UserEventPublisher eventPublisher,
+                              UserJpaRepository userJpaRepository) {
         this.userRepository = userRepository;
         this.providerProfileRepository = providerProfileRepository;
+        this.eventPublisher = eventPublisher;
+        this.userJpaRepository = userJpaRepository;
     }
 
     // ─── GET /internal/providers ──────────────────────────────────
@@ -109,6 +118,22 @@ public class InternalController {
                 request.litigeId()
         ));
     }
+
+    @GetMapping("/stats/users")
+    @Operation(summary = "Statistiques utilisateurs pour /admin/stats")
+    public ResponseEntity<UserStatsResponse> getUserStats() {
+        long totalClients   = userJpaRepository.countByRole(UserRole.CLIENT);
+        long totalProviders = userJpaRepository.countByRole(UserRole.PROVIDER);
+        long totalAgents    = userJpaRepository.countByRole(UserRole.AGENT);
+
+        return ResponseEntity.ok(new UserStatsResponse(totalClients, totalProviders, totalAgents));
+    }
+
+    public record UserStatsResponse(
+            long totalClients,
+            long totalProviders,
+            long totalAgents
+    ) {}
 
     // ─── PUT /internal/users/:id/rating ───────────────────────────
 
