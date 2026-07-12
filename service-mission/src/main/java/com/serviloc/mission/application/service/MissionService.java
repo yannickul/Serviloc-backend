@@ -296,7 +296,7 @@ public class MissionService implements MissionUseCase {
 
 
     @Override
-    public void rateAsClient(String missionId, String clientId, RateMissionRequest request) {
+    public RatingResponse rateAsClient(String missionId, String clientId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -311,11 +311,11 @@ public class MissionService implements MissionUseCase {
 
         Evaluation evaluation = buildEvaluation(
                 missionId, clientId, mission.getProviderId(), "PROVIDER", request);
-        evaluationRepository.save(evaluation);
+        Evaluation saved = evaluationRepository.save(evaluation);
 
         List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getProviderId());
         double average = evaluations.stream()
-                .mapToInt(e -> e.getRating())
+                .mapToInt(Evaluation::getRating)
                 .average()
                 .orElse(request.getRating().doubleValue());
 
@@ -331,10 +331,12 @@ public class MissionService implements MissionUseCase {
         }
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getProviderId(), "PROVIDER", request.getRating()));
+
+        return new RatingResponse(saved.getId(), mission.getProviderId(), "provider", request.getRating());
     }
 
     @Override
-    public void rateAsProvider(String missionId, String providerId, RateMissionRequest request) {
+    public RatingResponse rateAsProvider(String missionId, String providerId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -349,11 +351,11 @@ public class MissionService implements MissionUseCase {
 
         Evaluation evaluation = buildEvaluation(
                 missionId, providerId, mission.getClientId(), "CLIENT", request);
-        evaluationRepository.save(evaluation);
+        Evaluation saved = evaluationRepository.save(evaluation);
 
         List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getClientId());
         double average = evaluations.stream()
-                .mapToInt(e -> e.getRating())
+                .mapToInt(Evaluation::getRating)
                 .average()
                 .orElse(request.getRating().doubleValue());
 
@@ -370,6 +372,8 @@ public class MissionService implements MissionUseCase {
 
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getClientId(), "CLIENT", request.getRating()));
+
+        return new RatingResponse(saved.getId(), mission.getClientId(), "client", request.getRating());
     }
     // Tâche 8a — POST /client/missions/:id/litige
     @Override
@@ -427,6 +431,7 @@ public class MissionService implements MissionUseCase {
         evaluation.setTargetId(targetId);
         evaluation.setTargetRole(targetRole);
         evaluation.setRating(request.getRating());
+        evaluation.setCriteria(request.getCriteria());
         evaluation.setComment(request.getComment());
         evaluation.setCreatedAt(Instant.now());
         return evaluation;

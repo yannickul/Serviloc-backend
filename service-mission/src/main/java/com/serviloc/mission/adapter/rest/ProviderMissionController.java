@@ -52,13 +52,13 @@ public class ProviderMissionController {
     }
 
     @PostMapping("/missions/{id}/rate")
-    public ResponseEntity<ApiResponse<Void>> rate(
+    public ResponseEntity<ApiResponse<RatingResponse>> rate(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String providerId,
             @Valid @RequestBody RateMissionRequest request) {
 
-        missionUseCase.rateAsProvider(id, providerId, request);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        RatingResponse response = missionUseCase.rateAsProvider(id, providerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
     @PostMapping("/missions/{id}/litige")

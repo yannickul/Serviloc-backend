@@ -16,8 +16,8 @@ public interface MissionUseCase {
     CompleteMissionResponse completeMission(String missionId, String providerId);
     ValidateMissionResponse validateMission(String missionId, String clientId);
     void updateStep(String missionId, String stepId, String providerId);
-    void rateAsClient(String missionId, String clientId, RateMissionRequest request);
-    void rateAsProvider(String missionId, String providerId, RateMissionRequest request);
+    RatingResponse rateAsClient(String missionId, String clientId, RateMissionRequest request);
+    RatingResponse rateAsProvider(String missionId, String providerId, RateMissionRequest request);
     void declareLitigeAsClient(String missionId, String clientId, CreateLitigeRequest request);
     void declareLitigeAsProvider(String missionId, String providerId, CreateLitigeRequest request);
     DefineStepsResponse defineSteps(String missionId, String providerId, CreateStepsRequest request);
