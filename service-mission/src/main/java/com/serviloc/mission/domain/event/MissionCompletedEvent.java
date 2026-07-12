@@ -6,5 +6,6 @@ public record MissionCompletedEvent(
         String missionId,
         String clientId,
         String providerId,
-        BigDecimal amount
+        BigDecimal amount,
+        String transactionId
 ) { }

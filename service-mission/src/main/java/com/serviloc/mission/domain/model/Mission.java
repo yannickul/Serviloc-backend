@@ -9,6 +9,7 @@ public class Mission {
     private String id;
     private String demandId;
     private String quoteId;
+    private String transactionId;
     private String clientId;
     private String providerId;
     private String category;
@@ -29,6 +30,8 @@ public class Mission {
     public void setDemandId(String demandId) { this.demandId = demandId; }
     public String getQuoteId() { return quoteId; }
     public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public String getClientId() { return clientId; }
     public void setClientId(String clientId) { this.clientId = clientId; }
     public String getProviderId() { return providerId; }

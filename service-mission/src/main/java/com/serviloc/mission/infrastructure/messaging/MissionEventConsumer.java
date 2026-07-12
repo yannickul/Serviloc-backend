@@ -42,15 +42,9 @@ public class MissionEventConsumer {
             Channel channel,
             @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
 
-        log.info("Reçu payment.confirmed pour demande={} quote={}", event.demandId(), event.quoteId());
+        log.info("Reçu payment.confirmed pour demande={} transaction={}", event.demandId(), event.transactionId());
 
         try {
-            // Idempotence : si une Mission existe déjà pour cette demande, on ne recrée pas
-            boolean alreadyProcessed = missionRepository
-                    .findById("") // on cherche par demandId — voir remarque ci-dessous
-                    .isPresent();
-
-            // Idempotence réelle : on vérifie que la demande n'est pas déjà EN_COURS
             Demand demand = demandRepository.findById(event.demandId()).orElse(null);
             if (demand == null) {
                 log.error("payment.confirmed reçu pour une demande inconnue : {}", event.demandId());
@@ -64,27 +58,44 @@ public class MissionEventConsumer {
                 return;
             }
 
-            // Création de la Mission
+            // quoteId et category ne sont plus transmis par payment.confirmed —
+            // récupérés depuis la Demand, déjà renseignés lors de acceptQuote()
+            String quoteId = demand.getQuoteId();
+            String category = demand.getCategoryId();
+
+            if (quoteId == null) {
+                log.error("Demande {} n'a pas de quoteId renseigné — payment.confirmed incohérent", event.demandId());
+                channel.basicNack(tag, false, false);
+                return;
+            }
+
             Mission mission = new Mission();
             mission.setId("msn_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
             mission.setDemandId(event.demandId());
-            mission.setQuoteId(event.quoteId());
+            mission.setQuoteId(quoteId);
+            mission.setTransactionId(event.transactionId());
             mission.setClientId(event.clientId());
             mission.setProviderId(event.providerId());
-            mission.setCategory(event.category());
+            mission.setCategory(category);
             mission.setStatus(MissionStatus.EN_ATTENTE);
-            mission.setTotalAmount(event.totalAmount());
-            mission.setSequesteredAmount(event.sequesteredAmount());
+
+            // ⚠️ TODO Priorité 0 : totalAmount et sequesteredAmount utilisent tous deux
+            // event.amount() en attendant confirmation Yannick — à corriger s'il précise
+            // deux valeurs distinctes.
+            mission.setTotalAmount(event.amount());
+            mission.setSequesteredAmount(event.amount());
             mission.setPaymentStatus("CONFIRMED");
-            mission.setEstimatedDurationHours(event.estimatedDurationHours());
+
+            // ⚠️ TODO Priorité 0 : estimatedDurationHours n'a aucune source actuellement
+            // (absent de payment.confirmed et de Demand) — en attente de la décision Yannick
+            // (Feign vers Négociations vs enrichissement du payload). Placeholder à 0.
+            mission.setEstimatedDurationHours(0);
 
             missionRepository.save(mission);
             log.info("Mission créée : id={} pour demande={}", mission.getId(), event.demandId());
 
-            // Passage de la demande en EN_COURS
             demand.setStatus(DemandStatus.EN_COURS);
             demand.setProviderId(event.providerId());
-            demand.setQuoteId(event.quoteId());
             demandRepository.save(demand);
             log.info("Demande {} passée en EN_COURS", event.demandId());
 
@@ -92,7 +103,6 @@ public class MissionEventConsumer {
 
         } catch (Exception e) {
             log.error("Erreur traitement payment.confirmed pour demande={} : {}", event.demandId(), e.getMessage(), e);
-            // NACK sans requeue → message part en DLQ après épuisement des retries Spring AMQP
             channel.basicNack(tag, false, false);
         }
     }
