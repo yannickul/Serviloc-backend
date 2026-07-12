@@ -25,4 +25,7 @@ public interface UtilisateurClient {
 
     @PutMapping("/internal/users/{id}/rating")
     void updateRating(@PathVariable String id, @RequestBody UpdateRatingRequest request);
+
+    @GetMapping("/internal/stats/users")
+    UserStatsResponse getUserStats();
 }
