@@ -4,8 +4,10 @@ package com.serviloc.mission.infrastructure.persistence.adapter;
 import com.serviloc.mission.domain.model.Location;
 import com.serviloc.mission.domain.model.Mission;
 import com.serviloc.mission.domain.model.MissionStatus;
+import com.serviloc.mission.domain.model.MissionStep;
 import com.serviloc.mission.domain.repository.MissionRepository;
 import com.serviloc.mission.infrastructure.persistence.entity.MissionJpaEntity;
+import com.serviloc.mission.infrastructure.persistence.entity.MissionStepJpaEntity;
 import com.serviloc.mission.infrastructure.persistence.repository.MissionJpaRepository;
 import org.springframework.stereotype.Component;
 
@@ -77,6 +79,7 @@ public class MissionRepositoryAdapter implements MissionRepository {
         entity.setId(mission.getId());
         entity.setDemandId(mission.getDemandId());
         entity.setQuoteId(mission.getQuoteId());
+        entity.setTransactionId(mission.getTransactionId());
         entity.setClientId(mission.getClientId());
         entity.setProviderId(mission.getProviderId());
         entity.setCategory(mission.getCategory());
@@ -100,6 +103,7 @@ public class MissionRepositoryAdapter implements MissionRepository {
         mission.setId(entity.getId());
         mission.setDemandId(entity.getDemandId());
         mission.setQuoteId(entity.getQuoteId());
+        mission.setTransactionId(entity.getTransactionId());
         mission.setClientId(entity.getClientId());
         mission.setProviderId(entity.getProviderId());
         mission.setCategory(entity.getCategory());
@@ -116,6 +120,21 @@ public class MissionRepositoryAdapter implements MissionRepository {
                     entity.getLocationLng(),
                     entity.getLocationAddress()));
         }
+        if (entity.getSteps() != null) {
+            mission.setSteps(entity.getSteps().stream()
+                    .map(this::toDomainStep)
+                    .collect(Collectors.toList()));
+        }
         return mission;
+    }
+
+    private MissionStep toDomainStep(MissionStepJpaEntity entity) {
+        MissionStep step = new MissionStep();
+        step.setId(entity.getId());
+        step.setMissionId(entity.getMission().getId());
+        step.setLabel(entity.getLabel());
+        step.setCompleted(entity.isCompleted());
+        step.setOrder(entity.getOrder());
+        return step;
     }
 }
