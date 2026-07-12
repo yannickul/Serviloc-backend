@@ -103,4 +103,13 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     public double sumAmountByClientIdAndStatus(UUID clientId, TransactionStatus status) {
         return jpa.sumAmountByClientIdAndStatus(clientId, status);
     }
+    @Override
+    public double sumCommissionAmountBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.sumCommissionAmountBetween(from, to);
+    }
+
+    @Override
+    public double sumSequesteredAmountBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.sumSequesteredAmountBetween(from, to);
+    }
 }

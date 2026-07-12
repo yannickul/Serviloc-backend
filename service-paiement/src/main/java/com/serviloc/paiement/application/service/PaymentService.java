@@ -220,12 +220,11 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public FinancialStats getFinancialStats(LocalDateTime from, LocalDateTime to) {
-        double totalRevenue = transactionRepository.sumCommissionBetween(from, to);
-        long totalSequestre = transactionRepository.countByStatus(TransactionStatus.SEQUESTRE);
-        long totalLibere    = transactionRepository.countByStatus(TransactionStatus.LIBERE);
-        long totalEchec     = transactionRepository.countByStatus(TransactionStatus.ECHEC);
+        double totalRevenue      = transactionRepository.sumCommissionBetween(from, to);
+        double commissionEarned  = transactionRepository.sumCommissionAmountBetween(from, to);
+        double sequesteredAmount = transactionRepository.sumSequesteredAmountBetween(from, to);
 
-        return new FinancialStats(totalRevenue, totalSequestre, totalLibere, totalEchec);
+        return new FinancialStats(totalRevenue, commissionEarned, sequesteredAmount);
     }
 
     // ─── GET /admin/transactions ──────────────────────────────────
@@ -271,8 +270,7 @@ public class PaymentService {
 
     public record FinancialStats(
             double totalRevenue,
-            long totalSequestre,
-            long totalLibere,
-            long totalEchec
+            double commissionEarned,
+            double sequesteredAmount
     ) {}
 }

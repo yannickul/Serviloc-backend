@@ -53,4 +53,24 @@ public interface TransactionJpaRepository
             @Param("clientId") UUID clientId,
             @Param("status") TransactionStatus status
     );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.commissionAmount), 0) FROM TransactionJpaEntity t
+    WHERE t.status = 'LIBERE'
+    AND t.createdAt BETWEEN :from AND :to
+    """)
+    double sumCommissionAmountBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.amount), 0) FROM TransactionJpaEntity t
+    WHERE t.status = 'SEQUESTRE'
+    AND t.createdAt BETWEEN :from AND :to
+    """)
+    double sumSequesteredAmountBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
 }

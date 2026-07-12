@@ -23,4 +23,6 @@ public interface TransactionRepository {
     double sumCommissionBetween(LocalDateTime from, LocalDateTime to);
     long countByStatus(TransactionStatus status);
     double sumAmountByClientIdAndStatus(UUID clientId, TransactionStatus status);
+    double sumCommissionAmountBetween(LocalDateTime from, LocalDateTime to);
+    double sumSequesteredAmountBetween(LocalDateTime from, LocalDateTime to);
 }
