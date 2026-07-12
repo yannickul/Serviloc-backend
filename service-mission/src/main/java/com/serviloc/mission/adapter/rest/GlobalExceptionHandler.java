@@ -55,12 +55,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(
             MethodArgumentNotValidException ex) {
+
+        var firstError = ex.getBindingResult().getFieldErrors().get(0);
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + " : " + err.getDefaultMessage())
                 .collect(Collectors.joining(", "));
+
         log.warn("Validation échouée : {}", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("VALIDATION_ERROR", message));
+                .body(ApiResponse.error("VALIDATION_ERROR", message, firstError.getField()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -79,6 +82,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("BUSINESS_RULE_VIOLATION", ex.getMessage()));
     }
 
+    @ExceptionHandler(StepsAlreadyDefinedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStepsAlreadyDefined(StepsAlreadyDefinedException ex) {
+        log.warn("Étapes déjà définies : {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("ALREADY_EXISTS", ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         log.error("Erreur inattendue : {}", ex.getMessage(), ex);
@@ -94,6 +104,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("MISSING_HEADER",
                         "En-tête requis manquant : " + ex.getHeaderName()));
+    }
+
+    @ExceptionHandler(InvalidInternalTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidInternalToken(
+            InvalidInternalTokenException ex) {
+        log.warn("Tentative d'accès interne avec un token invalide");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("UNAUTHORIZED", ex.getMessage()));
     }
 
 }

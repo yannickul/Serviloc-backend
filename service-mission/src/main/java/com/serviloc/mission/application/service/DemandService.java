@@ -4,6 +4,7 @@ package com.serviloc.mission.application.service;
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
 import com.serviloc.mission.application.dto.request.CreateDemandRequest;
 import com.serviloc.mission.application.dto.request.LocationDto;
+import com.serviloc.mission.application.dto.response.InternalDemandResponse;
 import com.serviloc.mission.domain.event.QuoteAcceptedEvent;
 import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
 import com.serviloc.mission.application.dto.response.DemandResponse;
@@ -14,6 +15,8 @@ import com.serviloc.mission.domain.exception.DemandNotFoundException;
 import com.serviloc.mission.domain.exception.UnauthorizedMissionAccessException;
 import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.DemandRepository;
+import com.serviloc.mission.infrastructure.external.CategorieClient;
+import com.serviloc.mission.infrastructure.external.CategorySummary;
 import com.serviloc.mission.infrastructure.messaging.MissionEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +33,15 @@ public class DemandService implements DemandUseCase {
 
     private final DemandRepository demandRepository;
     private final MissionEventPublisher eventPublisher;
+    private final CategorieClient categorieClient;
 
     public DemandService(
             DemandRepository demandRepository,
-            MissionEventPublisher eventPublisher) {
+            MissionEventPublisher eventPublisher,
+            CategorieClient categorieClient) {
         this.demandRepository = demandRepository;
         this.eventPublisher = eventPublisher;
+        this.categorieClient = categorieClient;
     }
 
     @Override
@@ -185,6 +191,20 @@ public class DemandService implements DemandUseCase {
                 request.getPaymentMethod(),
                 request.getPhoneNumber()
         ));
+    }
+
+    @Transactional(readOnly = true)
+    public InternalDemandResponse getDemandForInternal(String demandId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        CategorySummary category = categorieClient.getCategoryById(demand.getCategoryId());
+
+        return new InternalDemandResponse(
+                demand.getId(),
+                demand.getDescription(),
+                category.getLabel(),
+                demand.getStatus().name().toLowerCase());
     }
 
     private DemandResponse toResponse(Demand demand) {
