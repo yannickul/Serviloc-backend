@@ -81,4 +81,8 @@ public class UserJpaEntity {
     public void setStatus(User.Status s)  { this.status = s; }
     public LocalDateTime getCreatedAt()   { return createdAt; }
     public LocalDateTime getUpdatedAt()   { return updatedAt; }
+
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setLastName(String lastName)   { this.lastName = lastName; }
+    public void setPhone(String phone)         { this.phone = phone; }
 }

@@ -61,7 +61,7 @@ public final class UserResponseMapper {
 
     public static ProfileDtos.ProviderProfileResponse toProviderProfile(User user) {
         return new ProfileDtos.ProviderProfileResponse(
-                UserIdFormatter.formatUserId(user.getId()),
+                user.getId().toString(),
                 "provider",
                 user.getFirstName(),
                 user.getLastName(),
@@ -69,30 +69,33 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                null,       // avatarUrl
                 user.getStatus().name().toLowerCase(),
-                null,       // specialty — ProviderProfile JPA en S2
-                0.0,        // rating
-                0,          // completedMissions
-                false,      // isAvailable
-                0.0,        // hourlyRate
-                null,       // serviceZone
+                null, 0.0, 0, false, 0.0, null,
                 ProfileDtos.WeeklyAvailability.defaultSchedule(),
-                0.0,        // monthlyEarnings
+                0.0,
                 java.util.List.of(),
-                false,      // estCertifie
+                false,
+                java.util.List.of(),
                 formatDate(user)
         );
     }
 
     public static ProfileDtos.ProviderProfileResponse toProviderProfile(
-            User user, com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
 
         ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
                 ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
                 : null;
 
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
         return new ProfileDtos.ProviderProfileResponse(
-                UserIdFormatter.formatUserId(user.getId()),
+                user.getId().toString(),
                 "provider",
                 user.getFirstName(),
                 user.getLastName(),
@@ -100,6 +103,7 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                profile.getAvatarUrl(),
                 user.getStatus().name().toLowerCase(),
                 profile.getSpecialty(),
                 profile.getRating(),
@@ -111,6 +115,7 @@ public final class UserResponseMapper {
                 profile.getMonthlyEarnings(),
                 profile.getCertifications(),
                 profile.isEstCertifie(),
+                documents,
                 formatDate(user)
         );
     }
@@ -177,6 +182,11 @@ public final class UserResponseMapper {
                 ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
                 : null;
 
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
         return new ProfileDtos.ProviderProfileResponse(
                 user.getId().toString(),
                 "provider",
@@ -186,6 +196,7 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                profile.getAvatarUrl(),
                 user.getStatus().name().toLowerCase(),
                 profile.getSpecialty(),
                 profile.getRating(),
@@ -197,6 +208,7 @@ public final class UserResponseMapper {
                 enrichment.monthlyEarnings(),
                 profile.getCertifications(),
                 profile.isEstCertifie(),
+                documents,
                 formatDate(user)
         );
     }

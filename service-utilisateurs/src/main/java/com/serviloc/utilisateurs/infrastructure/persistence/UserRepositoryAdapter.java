@@ -35,6 +35,9 @@ public class UserRepositoryAdapter implements UserRepository {
         // (préserve createdAt qui est géré par @CreatedDate à l'insertion uniquement)
         entity.setStatus(user.getStatus());
         entity.setPassword(user.getPassword());
+        entity.setFirstName(user.getFirstName());
+        entity.setLastName(user.getLastName());
+        entity.setPhone(user.getPhone());
 
         return toDomain(jpa.save(entity));
     }

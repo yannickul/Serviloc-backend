@@ -88,6 +88,21 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void setFirstName(String firstName) {
+        if (firstName != null && !firstName.isBlank())
+            this.firstName = firstName;
+    }
+
+    public void setLastName(String lastName) {
+        if (lastName != null && !lastName.isBlank())
+            this.lastName = lastName;
+    }
+
+    public void setPhone(String phone) {
+        if (phone != null && !phone.isBlank())
+            this.phone = phone;
+    }
+
     public boolean isActive() {
         return this.status == Status.ACTIVE;
     }

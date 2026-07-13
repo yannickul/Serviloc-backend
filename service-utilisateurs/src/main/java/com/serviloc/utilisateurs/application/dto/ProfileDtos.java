@@ -33,6 +33,15 @@ public final class ProfileDtos {
             boolean available
     ) {}
 
+    public record ProviderDocument(
+            String id,
+            String type,
+            String label,
+            String reference,
+            String status,
+            String fileUrl
+    ) {}
+
     // ─── WeeklyAvailability ───────────────────────────────────────
 
     public record WeeklyAvailability(
@@ -77,14 +86,15 @@ public final class ProfileDtos {
     // ─── ProviderProfileResponse ──────────────────────────────────
 
     public record ProviderProfileResponse(
-            String id,              // usr_jcm456
-            String role,            // "provider"
+            String id,
+            String role,
             String firstName,
             String lastName,
             String fullName,
             String phone,
             String email,
             String avatarInitial,
+            String avatarUrl,
             String status,
             String specialty,
             double rating,
@@ -96,6 +106,7 @@ public final class ProfileDtos {
             double monthlyEarnings,
             List<String> certifications,
             boolean estCertifie,
+            List<ProviderDocument> documents,
             String createdAt
     ) {}
 

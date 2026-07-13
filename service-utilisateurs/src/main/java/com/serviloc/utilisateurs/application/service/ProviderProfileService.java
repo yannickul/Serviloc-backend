@@ -38,10 +38,19 @@ public class ProviderProfileService {
 
     // ─── PATCH /provider/profile ──────────────────────────────────
 
-    public ProfileUpdatedResponse updateProfile(UUID userId,
-                                                UpdateProfileRequest request) {
+    public ProfileUpdatedResponse updateProfile(UUID userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable"));
+
+        // Mise à jour des champs personnels si fournis
+        if (request.firstName() != null && !request.firstName().isBlank())
+            user.setFirstName(request.firstName());
+        if (request.lastName() != null && !request.lastName().isBlank())
+            user.setLastName(request.lastName());
+        if (request.phone() != null && !request.phone().isBlank())
+            user.setPhone(request.phone());
+
+        userRepository.save(user);
 
         ProviderProfile profile = providerProfileRepository.findByUserId(userId)
                 .orElse(ProviderProfile.create(userId));
@@ -55,11 +64,11 @@ public class ProviderProfileService {
                 request.radiusKm(),
                 request.estCertifie(),
                 request.certifications(),
-                request.documentIds()
+                request.documentIds(),
+                request.avatarUrl()
         );
 
         providerProfileRepository.save(profile);
-
         eventPublisher.publishProviderProfileUpdated(userId, user.getEmail());
 
         log.info("[PROVIDER] Profil mis à jour : userId={}", userId);
