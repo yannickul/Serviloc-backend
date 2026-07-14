@@ -89,4 +89,15 @@ public class AdminStatsService {
 
         return response;
     }
+
+    // AdminStatsService.java — nouvelle méthode dédiée
+    public AdminStatsResponse.MissionsStats getMissionsStatsSlice() {
+        long totalMissions = missionRepository.countAll();
+        long completedMissions = missionRepository.countByStatus(MissionStatus.TERMINEE);
+        long inProgressMissions = missionRepository.countByStatus(MissionStatus.EN_COURS);
+        long cancelledDemandsAsMissions = demandRepository.countByStatus(DemandStatus.ANNULEE);
+
+        return new AdminStatsResponse.MissionsStats(
+                totalMissions, completedMissions, inProgressMissions, cancelledDemandsAsMissions);
+    }
 }
