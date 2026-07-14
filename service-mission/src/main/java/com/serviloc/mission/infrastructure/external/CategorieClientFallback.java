@@ -1,4 +1,3 @@
-// infrastructure/external/CategorieClientFallback.java
 package com.serviloc.mission.infrastructure.external;
 
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +13,7 @@ public class CategorieClientFallback implements CategorieClient {
         CategorySummary fallback = new CategorySummary();
         fallback.setId(id);
         fallback.setLabel(null);
+        fallback.setIconKey(null);
         return fallback;
     }
 }

@@ -1,14 +1,13 @@
-// application/service/DemandService.java
+// application/service/DemandService.java — version complète avec cache
 package com.serviloc.mission.application.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
 import com.serviloc.mission.application.dto.request.CreateDemandRequest;
 import com.serviloc.mission.application.dto.request.LocationDto;
-import com.serviloc.mission.application.dto.response.InternalDemandResponse;
 import com.serviloc.mission.domain.event.QuoteAcceptedEvent;
 import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
-import com.serviloc.mission.application.dto.response.DemandResponse;
-import com.serviloc.mission.application.dto.response.PagedResponse;
+import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.port.in.DemandUseCase;
 import com.serviloc.mission.domain.event.DemandPublishedEvent;
 import com.serviloc.mission.domain.exception.DemandNotFoundException;
@@ -18,15 +17,19 @@ import com.serviloc.mission.domain.repository.DemandRepository;
 import com.serviloc.mission.infrastructure.external.CategorieClient;
 import com.serviloc.mission.infrastructure.external.CategorySummary;
 import com.serviloc.mission.infrastructure.messaging.MissionEventPublisher;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 public class DemandService implements DemandUseCase {
@@ -34,14 +37,20 @@ public class DemandService implements DemandUseCase {
     private final DemandRepository demandRepository;
     private final MissionEventPublisher eventPublisher;
     private final CategorieClient categorieClient;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public DemandService(
             DemandRepository demandRepository,
             MissionEventPublisher eventPublisher,
-            CategorieClient categorieClient) {
+            CategorieClient categorieClient,
+            StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper) {
         this.demandRepository = demandRepository;
         this.eventPublisher = eventPublisher;
         this.categorieClient = categorieClient;
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -165,6 +174,7 @@ public class DemandService implements DemandUseCase {
         demand.setQuoteId(null);
         demandRepository.save(demand);
     }
+
     @Override
     public void acceptQuote(String demandId, String clientId, AcceptQuoteRequest request) {
         Demand demand = demandRepository.findById(demandId)
@@ -174,7 +184,6 @@ public class DemandService implements DemandUseCase {
             throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
         }
 
-        // Contrainte métier section 18.6 : pas d'acceptation si un devis est déjà accepté
         if (demand.getQuoteId() != null) {
             throw new IllegalStateException(
                     "Un devis est déjà accepté pour la demande " + demandId);
@@ -193,32 +202,54 @@ public class DemandService implements DemandUseCase {
         ));
     }
 
-    @Transactional(readOnly = true)
-    public InternalDemandResponse getDemandForInternal(String demandId) {
-        Demand demand = demandRepository.findById(demandId)
-                .orElseThrow(() -> new DemandNotFoundException(demandId));
+    private CategorySummary resolveCategory(String categoryId) {
+        String cacheKey = "category:" + categoryId;
 
-        CategorySummary category = categorieClient.getCategoryById(demand.getCategoryId());
+        try {
+            String cached = redisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
+                return objectMapper.readValue(cached, CategorySummary.class);
+            }
+        } catch (Exception e) {
+            log.warn("Erreur lecture cache Redis pour categoryId={} : {}", categoryId, e.getMessage());
+        }
 
-        return new InternalDemandResponse(
-                demand.getId(),
-                demand.getDescription(),
-                category.getLabel(),
-                demand.getStatus().name().toLowerCase());
+        CategorySummary category = categorieClient.getCategoryById(categoryId);
+
+        try {
+            redisTemplate.opsForValue().set(
+                    cacheKey, objectMapper.writeValueAsString(category), Duration.ofHours(1));
+        } catch (Exception e) {
+            log.warn("Erreur écriture cache Redis pour categoryId={} : {}", categoryId, e.getMessage());
+        }
+
+        return category;
     }
 
     private DemandResponse toResponse(Demand demand) {
         DemandResponse response = new DemandResponse();
         response.setId(demand.getId());
         response.setClientId(demand.getClientId());
-        response.setCategoryId(demand.getCategoryId());
+
+        CategorySummary category = resolveCategory(demand.getCategoryId());
+        response.setCategory(new CategoryDto(category.getId(), category.getLabel(), category.getIconKey()));
+
         response.setDescription(demand.getDescription());
-        response.setPhotoIds(demand.getPhotoIds());
+
+        if (demand.getPhotoIds() != null) {
+            List<PhotoDto> photos = demand.getPhotoIds().stream()
+                    .map(id -> new PhotoDto(id, null, null))
+                    .collect(Collectors.toList());
+            response.setPhotos(photos);
+        }
+
         response.setStatus(demand.getStatus().name());
         response.setIsUrgent(demand.isUrgent());
         response.setCreatedAt(demand.getCreatedAt());
+        response.setUpdatedAt(demand.getUpdatedAt());
         response.setProviderId(demand.getProviderId());
         response.setQuoteId(demand.getQuoteId());
+        response.setMissionId(demand.getMissionId());
 
         if (demand.getLocation() != null) {
             LocationDto loc = new LocationDto();

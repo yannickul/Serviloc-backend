@@ -1,4 +1,3 @@
-// infrastructure/persistence/adapter/DemandRepositoryAdapter.java
 package com.serviloc.mission.infrastructure.persistence.adapter;
 
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
@@ -97,6 +96,7 @@ public class DemandRepositoryAdapter implements DemandRepository {
         entity.setCreatedAt(demand.getCreatedAt());
         entity.setProviderId(demand.getProviderId());
         entity.setQuoteId(demand.getQuoteId());
+        entity.setMissionId(demand.getMissionId());
         if (demand.getLocation() != null) {
             entity.setLat(demand.getLocation().lat());
             entity.setLng(demand.getLocation().lng());
@@ -121,6 +121,8 @@ public class DemandRepositoryAdapter implements DemandRepository {
         demand.setCreatedAt(entity.getCreatedAt());
         demand.setProviderId(entity.getProviderId());
         demand.setQuoteId(entity.getQuoteId());
+        demand.setMissionId(entity.getMissionId());
+        demand.setUpdatedAt(entity.getUpdatedAt());
         if (entity.getLat() != 0 || entity.getLng() != 0) {
             demand.setLocation(new Location(
                     entity.getLat(), entity.getLng(), entity.getAddress()));

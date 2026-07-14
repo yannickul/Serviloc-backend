@@ -1,4 +1,3 @@
-// application/dto/response/DemandResponse.java
 package com.serviloc.mission.application.dto.response;
 
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
@@ -10,27 +9,29 @@ public class DemandResponse {
 
     private String id;
     private String clientId;
-    private String categoryId;
+    private CategoryDto category;
     private String description;
-    private List<String> photoIds;
+    private List<PhotoDto> photos;
     private LocationDto location;
     private String status;
     private boolean isUrgent;
     private BudgetRangeDto estimatedBudget;
     private String providerId;
     private String quoteId;
+    private String missionId;
     private Instant createdAt;
+    private Instant updatedAt;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getClientId() { return clientId; }
     public void setClientId(String clientId) { this.clientId = clientId; }
-    public String getCategoryId() { return categoryId; }
-    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public CategoryDto getCategory() { return category; }
+    public void setCategory(CategoryDto category) { this.category = category; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public List<String> getPhotoIds() { return photoIds; }
-    public void setPhotoIds(List<String> photoIds) { this.photoIds = photoIds; }
+    public List<PhotoDto> getPhotos() { return photos; }
+    public void setPhotos(List<PhotoDto> photos) { this.photos = photos; }
     public LocationDto getLocation() { return location; }
     public void setLocation(LocationDto location) { this.location = location; }
     public String getStatus() { return status; }
@@ -43,6 +44,10 @@ public class DemandResponse {
     public void setProviderId(String providerId) { this.providerId = providerId; }
     public String getQuoteId() { return quoteId; }
     public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
+    public String getMissionId() { return missionId; }
+    public void setMissionId(String missionId) { this.missionId = missionId; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
