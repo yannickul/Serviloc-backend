@@ -1,67 +1,125 @@
 package com.serviloc.categories.domain.model;
 
+import java.time.Instant;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
+/**
+ * Aggregate root du référentiel des catégories de services.
+ * Aucune dépendance Spring / JPA : logique métier pure.
+ */
 public class ServiceCategory {
 
-    private final Long id;          // interne, jamais exposé
-    private final String slug;      // identifiant public (exposé comme "id" dans l’API)
+    private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
+
+    private final CategoryId id;
     private String label;
-    private String iconKey;
-    private static String color;
+    private IconKey iconKey;
+    private String color;
+    private long demandCount;
+    private final Instant createdAt;
+    private Instant updatedAt;
 
-    private Integer demandCount;    // stats (admin)
-    private Double percentageShare; // stats (admin)
-
-    // Constructeur privé
-    private ServiceCategory(Long id, String slug, String label,
-                            String iconKey, String color,
-                            Integer demandCount, Double percentageShare) {
+    private ServiceCategory(CategoryId id, String label, IconKey iconKey, String color,
+                             long demandCount, Instant createdAt, Instant updatedAt) {
         this.id = id;
-        this.slug = slug;
         this.label = label;
         this.iconKey = iconKey;
         this.color = color;
         this.demandCount = demandCount;
-        this.percentageShare = percentageShare;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
-    /** Création d’une nouvelle catégorie (id interne null, stats null) */
-    public static ServiceCategory create(String slug, String label,
-                                         String iconKey) {
-        return new ServiceCategory(null, slug, label, iconKey, color, null, null);
+    /** Factory method utilisée à la création (POST /admin/categories). */
+    public static ServiceCategory create(String label, IconKey iconKey, String color) {
+        validateLabel(label);
+        validateColor(color);
+        Objects.requireNonNull(iconKey, "iconKey est obligatoire");
+        Instant now = Instant.now();
+        return new ServiceCategory(CategoryId.fromLabel(label), label.trim(), iconKey, color, 0L, now, now);
     }
 
-    /** Reconstitution depuis la base (id connu, stats éventuellement présentes) */
-    public static ServiceCategory reconstitute(Long id, String slug, String label,
-                                               String iconKey, String color,
-                                               Integer demandCount, Double percentageShare) {
-        return new ServiceCategory(id, slug, label, iconKey, color, demandCount, percentageShare);
+    /** Reconstruction depuis la persistance : n'applique pas les invariants de création. */
+    public static ServiceCategory reconstitute(CategoryId id, String label, IconKey iconKey, String color,
+                                                long demandCount, Instant createdAt, Instant updatedAt) {
+        return new ServiceCategory(id, label, iconKey, color, demandCount, createdAt, updatedAt);
     }
 
-    // Getters
-    public Long getId() { return id; }              // interne
-    public String getSlug() { return slug; }        // exposé comme "id" dans l’API
-    public String getLabel() { return label; }
-    public String getIconKey() { return iconKey; }
-    public String getColor() { return color; }
-    public Integer getDemandCount() { return demandCount; }
-    public Double getPercentageShare() { return percentageShare; }
+    public void rename(String newLabel, IconKey newIconKey, String newColor) {
+        validateLabel(newLabel);
+        validateColor(newColor);
+        Objects.requireNonNull(newIconKey, "iconKey est obligatoire");
+        this.label = newLabel.trim();
+        this.iconKey = newIconKey;
+        this.color = newColor;
+        this.updatedAt = Instant.now();
+    }
 
-    // Mutation métier
-    public void updateDetails(String label, String iconKey, String color) {
-        this.label = label;
-        this.iconKey = iconKey;
-        this.color = color;
+    public void incrementDemandCount() {
+        this.demandCount += 1;
+        this.updatedAt = Instant.now();
+    }
+
+    public double percentageShareOver(long totalDemandAcrossCategories) {
+        if (totalDemandAcrossCategories <= 0) {
+            return 0.0;
+        }
+        return (this.demandCount * 100.0) / totalDemandAcrossCategories;
+    }
+
+    private static void validateLabel(String label) {
+        if (label == null || label.isBlank()) {
+            throw new IllegalArgumentException("Le label de la catégorie est obligatoire");
+        }
+        if (label.trim().length() > 100) {
+            throw new IllegalArgumentException("Le label de la catégorie ne peut pas dépasser 100 caractères");
+        }
+    }
+
+    private static void validateColor(String color) {
+        if (color == null || !HEX_COLOR.matcher(color).matches()) {
+            throw new IllegalArgumentException("La couleur doit être un code hexadécimal valide (ex: #dbeafe)");
+        }
+    }
+
+    public CategoryId getId() {
+        return id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public IconKey getIconKey() {
+        return iconKey;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public long getDemandCount() {
+        return demandCount;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ServiceCategory c)) return false;
-        return Objects.equals(slug, c.slug);
+        if (!(o instanceof ServiceCategory that)) return false;
+        return Objects.equals(id, that.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(slug); }
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }
