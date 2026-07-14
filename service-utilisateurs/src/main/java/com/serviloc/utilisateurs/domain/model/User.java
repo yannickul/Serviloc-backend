@@ -17,6 +17,7 @@ public class User {
     private Status status;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String avatarUrl;
 
 
     public static User create(String firstName, String lastName,
@@ -101,6 +102,13 @@ public class User {
     public void setPhone(String phone) {
         if (phone != null && !phone.isBlank())
             this.phone = phone;
+    }
+
+    public String getAvatarUrl() { return avatarUrl; }
+
+    public void setAvatarUrl(String avatarUrl) {
+        if (avatarUrl != null && !avatarUrl.isBlank())
+            this.avatarUrl = avatarUrl;
     }
 
     public boolean isActive() {

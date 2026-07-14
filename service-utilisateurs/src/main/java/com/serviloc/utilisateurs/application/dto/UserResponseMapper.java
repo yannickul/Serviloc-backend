@@ -40,7 +40,7 @@ public final class UserResponseMapper {
 
     public static ProfileDtos.ClientProfileResponse toClientProfile(User user) {
         return new ProfileDtos.ClientProfileResponse(
-                UserIdFormatter.formatUserId(user.getId()),
+                user.getId().toString(),
                 "client",
                 user.getFirstName(),
                 user.getLastName(),
@@ -48,11 +48,11 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                user.getAvatarUrl(),
                 user.getStatus().name().toLowerCase(),
-                0.0,        // totalSpent — sera alimenté par Service Paiement en S3
-                0,          // completedMissions — sera alimenté par Service Missions en S3
-                null,       // pendingPayment — stub S1
-                null,       // location — stub S1
+                0.0, 0,
+                java.util.List.of(),
+                null,
                 formatDate(user)
         );
     }
@@ -162,6 +162,7 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                user.getAvatarUrl(),
                 user.getStatus().name().toLowerCase(),
                 enrichment.totalSpent(),
                 enrichment.completedMissions(),
@@ -212,6 +213,27 @@ public final class UserResponseMapper {
                 formatDate(user)
         );
     }
+
+    // ─── PublicClientProfile ──────────────────────────────────────
+
+    public static ProfileDtos.PublicClientProfileResponse toPublicClientProfile(User user) {
+        return new ProfileDtos.PublicClientProfileResponse(
+                user.getId().toString(),
+                "client",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                0,
+                null,
+                formatDate(user)
+        );
+    }
+
 
 
     // ─── Helper ───────────────────────────────────────────────────

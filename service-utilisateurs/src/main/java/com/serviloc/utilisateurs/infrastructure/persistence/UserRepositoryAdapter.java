@@ -38,6 +38,7 @@ public class UserRepositoryAdapter implements UserRepository {
         entity.setFirstName(user.getFirstName());
         entity.setLastName(user.getLastName());
         entity.setPhone(user.getPhone());
+        entity.setAvatarUrl(user.getAvatarUrl());
 
         return toDomain(jpa.save(entity));
     }

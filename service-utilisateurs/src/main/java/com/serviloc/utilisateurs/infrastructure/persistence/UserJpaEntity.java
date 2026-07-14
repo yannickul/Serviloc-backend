@@ -49,6 +49,9 @@ public class UserJpaEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
@@ -85,4 +88,7 @@ public class UserJpaEntity {
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName)   { this.lastName = lastName; }
     public void setPhone(String phone)         { this.phone = phone; }
+
+    public String getAvatarUrl()          { return avatarUrl; }
+    public void setAvatarUrl(String url)  { this.avatarUrl = url; }
 }

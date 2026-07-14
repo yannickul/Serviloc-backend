@@ -75,6 +75,7 @@ public final class ProfileDtos {
             String phone,
             String email,
             String avatarInitial,
+            String avatarUrl,
             String status,
             double totalSpent,
             int completedMissions,
@@ -141,5 +142,21 @@ public final class ProfileDtos {
             double hourlyRate,
             ServiceZone serviceZone,
             boolean isAvailable
+    ) {}
+
+    public record PublicClientProfileResponse(
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String avatarUrl,
+            String status,
+            int completedMissions,
+            Location location,
+            String createdAt
     ) {}
 }
