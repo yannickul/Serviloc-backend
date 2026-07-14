@@ -8,6 +8,8 @@ import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.DemandRepository;
 import com.serviloc.mission.domain.repository.MissionRepository;
 import com.serviloc.mission.infrastructure.config.RabbitMQConfig;
+import com.serviloc.mission.infrastructure.external.NegociationClient;
+import com.serviloc.mission.infrastructure.external.QuoteSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -27,12 +29,15 @@ public class MissionEventConsumer {
 
     private final DemandRepository demandRepository;
     private final MissionRepository missionRepository;
+    private final NegociationClient negociationClient;
 
     public MissionEventConsumer(
             DemandRepository demandRepository,
-            MissionRepository missionRepository) {
+            MissionRepository missionRepository,
+            NegociationClient negociationClient) {
         this.demandRepository = demandRepository;
         this.missionRepository = missionRepository;
+        this.negociationClient = negociationClient;
     }
 
     @RabbitListener(queues = RabbitMQConfig.Q_PAYMENT_CONFIRMED)
@@ -86,9 +91,8 @@ public class MissionEventConsumer {
             mission.setSequesteredAmount(event.amount());
             mission.setPaymentStatus("CONFIRMED");
 
-            // ⚠️ TODO Priorité 0 : estimatedDurationHours n'a aucune source actuellement
-            // (absent de payment.confirmed et de Demand) — en attente de la décision Yannick
-            // (Feign vers Négociations vs enrichissement du payload). Placeholder à 0.
+            QuoteSummary quote = negociationClient.getQuoteById(quoteId);
+            mission.setEstimatedDurationHours(quote.estimatedDurationHours());
             mission.setEstimatedDurationHours(0);
 
             missionRepository.save(mission);
@@ -96,6 +100,7 @@ public class MissionEventConsumer {
 
             demand.setStatus(DemandStatus.EN_COURS);
             demand.setProviderId(event.providerId());
+            demand .setMissionId(mission.getId());
             demandRepository.save(demand);
             log.info("Demande {} passée en EN_COURS", event.demandId());
 

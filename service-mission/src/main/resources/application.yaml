@@ -84,12 +84,21 @@ resilience4j:
         waitDurationInOpenState: 30s
         permittedNumberOfCallsInHalfOpenState: 3
         registerHealthIndicator: true
+      negociationClient:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
   retry:
     instances:
       utilisateurClient:
         maxAttempts: 3
         waitDuration: 500ms
       categorieClient:
+        maxAttempts: 3
+        waitDuration: 500ms
+      negociationClient:
         maxAttempts: 3
         waitDuration: 500ms
 
