@@ -27,7 +27,13 @@ public class RedisCacheConfig {
                 .activateDefaultTyping(
                         com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator.builder()
                                 .allowIfBaseType(Object.class).build(),
-                        ObjectMapper.DefaultTyping.NON_FINAL);
+                        // EVERYTHING (et non NON_FINAL) : les DTO mis en cache sont des records
+                        // Java, donc implicitement `final`. Avec NON_FINAL, Jackson n'écrit
+                        // l'info de type ("@class") QUE pour les classes non-finales, ce qui
+                        // fait qu'à la relecture depuis Redis, un record revient sous forme de
+                        // LinkedHashMap brute (perte du type) → ClassCastException → 500 au
+                        // deuxième appel (cache hit) sur un endpoint interne.
+                        ObjectMapper.DefaultTyping.EVERYTHING);
 
         GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(mapper);
 

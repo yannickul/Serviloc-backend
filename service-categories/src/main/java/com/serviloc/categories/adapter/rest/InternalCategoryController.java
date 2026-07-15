@@ -4,8 +4,8 @@ import com.serviloc.categories.adapter.rest.dto.ApiResponse;
 import com.serviloc.categories.application.dto.CategoryIncrementResponse;
 import com.serviloc.categories.application.dto.CategoryResponse;
 import com.serviloc.categories.application.service.CategoryService;
-import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +22,7 @@ import java.util.List;
  */
 @RestController
 @Tag(name = "Internal - Catégories", description = "Appels inter-services (Feign) uniquement")
-@Hidden
+@SecurityRequirement(name = "internal-token")
 public class InternalCategoryController {
 
     private final CategoryService categoryService;
