@@ -8,10 +8,7 @@ import com.serviloc.mission.application.dto.request.RateMissionRequest;
 import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.port.in.MissionUseCase;
 import com.serviloc.mission.domain.event.*;
-import com.serviloc.mission.domain.exception.DoubleValidationAlreadyDoneException;
-import com.serviloc.mission.domain.exception.MissionNotFoundException;
-import com.serviloc.mission.domain.exception.StepsAlreadyDefinedException;
-import com.serviloc.mission.domain.exception.UnauthorizedMissionAccessException;
+import com.serviloc.mission.domain.exception.*;
 import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.EvaluationRepository;
 import com.serviloc.mission.domain.repository.MissionRepository;
@@ -114,6 +111,15 @@ public class MissionService implements MissionUseCase {
                     "La mission " + missionId + " ne peut pas démarrer depuis le status " + mission.getStatus());
         }
 
+        if (mission.getEstimatedDurationHours() <= 0) {
+            throw new MissionSetupIncompleteException(missionId, "durée estimée non définie");
+        }
+
+        List<MissionStepJpaEntity> steps = stepRepository.findByMissionId(missionId);
+        if (steps.isEmpty()) {
+            throw new MissionSetupIncompleteException(missionId, "aucune étape définie");
+        }
+
         mission.setStatus(MissionStatus.EN_COURS);
         mission.setStartedAt(Instant.now());
         missionRepository.save(mission);
@@ -124,7 +130,6 @@ public class MissionService implements MissionUseCase {
         return new StartMissionResponse(
                 mission.getId(), mission.getStatus().name().toLowerCase(), mission.getStartedAt());
     }
-
     // Tâche 4 — POST /provider/missions/:id/complete
     @Override
     public CompleteMissionResponse completeMission(String missionId, String providerId) {
@@ -171,6 +176,7 @@ public class MissionService implements MissionUseCase {
                 missionId, "provider", false, mission.getStatus().name().toLowerCase(),
                 "En attente de la validation client.");
     }
+
     // Tâche 5 — POST /client/missions/:id/validate
     @Override
     public ValidateMissionResponse validateMission(String missionId, String clientId) {
@@ -251,6 +257,9 @@ public class MissionService implements MissionUseCase {
             throw new StepsAlreadyDefinedException(missionId);
         }
 
+        mission.setEstimatedDurationHours(request.getEstimatedDurationHours());
+        missionRepository.save(mission);
+
         MissionJpaEntity missionRef = missionJpaRepository.getReferenceById(missionId);
 
         List<StepResponse> responses = new ArrayList<>();
@@ -268,8 +277,9 @@ public class MissionService implements MissionUseCase {
             responses.add(new StepResponse(saved.getId(), saved.getLabel(), saved.isCompleted(), saved.getOrder()));
         }
 
-        return new DefineStepsResponse(missionId, responses);
+        return new DefineStepsResponse(missionId, mission.getEstimatedDurationHours(), responses);
     }
+
     // Tâche 6 — PATCH /provider/missions/:id/steps/:stepId
     @Override
     public void updateStep(String missionId, String stepId, String providerId) {

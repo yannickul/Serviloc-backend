@@ -114,4 +114,11 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("UNAUTHORIZED", ex.getMessage()));
     }
 
+    @ExceptionHandler(MissionSetupIncompleteException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissionSetupIncomplete(MissionSetupIncompleteException ex) {
+        log.warn("Configuration mission incomplète : {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("MISSION_SETUP_INCOMPLETE", ex.getMessage()));
+    }
+
 }
