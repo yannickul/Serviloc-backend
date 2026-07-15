@@ -1,4 +1,4 @@
-/// infrastructure/external/NegociationClient.java
+// infrastructure/external/NegociationClient.java
 package com.serviloc.mission.infrastructure.external;
 
 import org.springframework.cloud.openfeign.FeignClient;
@@ -9,5 +9,5 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface NegociationClient {
 
     @GetMapping("/internal/quotes/{quoteId}")
-    QuoteSummary getQuoteById(@PathVariable String quoteId);
+    QuoteDto getQuoteById(@PathVariable String quoteId);
 }

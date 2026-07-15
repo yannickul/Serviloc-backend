@@ -1,16 +1,20 @@
 // infrastructure/external/NegociationClientFallback.java
 package com.serviloc.mission.infrastructure.external;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-@Slf4j
+import java.math.BigDecimal;
+
 @Component
 public class NegociationClientFallback implements NegociationClient {
 
+    private static final Logger log = LoggerFactory.getLogger(NegociationClientFallback.class);
+
     @Override
-    public QuoteSummary getQuoteById(String quoteId) {
-        log.warn("NegociationClient indisponible — estimatedDurationHours non résolu pour quoteId={}", quoteId);
-        return new QuoteSummary(quoteId, 0);
+    public QuoteDto getQuoteById(String quoteId) {
+        log.warn("NegociationClient indisponible — quoteId={} non résolu", quoteId);
+        return new QuoteDto(quoteId, null, null, BigDecimal.ZERO, null, null, null);
     }
 }

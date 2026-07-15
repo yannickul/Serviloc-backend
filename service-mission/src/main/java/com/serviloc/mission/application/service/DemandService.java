@@ -268,4 +268,18 @@ public class DemandService implements DemandUseCase {
 
         return response;
     }
+
+    @Transactional(readOnly = true)
+    public InternalDemandResponse getDemandForInternal(String demandId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        CategorySummary category = resolveCategory(demand.getCategoryId());
+
+        return new InternalDemandResponse(
+                demand.getId(),
+                demand.getDescription(),
+                category.getLabel(),
+                demand.getStatus().name().toLowerCase());
+    }
 }

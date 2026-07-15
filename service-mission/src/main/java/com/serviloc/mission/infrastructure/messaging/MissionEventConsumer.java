@@ -1,15 +1,15 @@
-// infrastructure/messaging/MissionEventConsumer.java
+// infrastructure/messaging/MissionEventConsumer.java — version complète et finale
 package com.serviloc.mission.infrastructure.messaging;
 
 import com.rabbitmq.client.Channel;
+import com.serviloc.mission.application.port.out.QuotePort;
 import com.serviloc.mission.domain.event.PaymentConfirmedEvent;
 import com.serviloc.mission.domain.event.PaymentFailedEvent;
 import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.DemandRepository;
 import com.serviloc.mission.domain.repository.MissionRepository;
 import com.serviloc.mission.infrastructure.config.RabbitMQConfig;
-import com.serviloc.mission.infrastructure.external.NegociationClient;
-import com.serviloc.mission.infrastructure.external.QuoteSummary;
+import com.serviloc.mission.infrastructure.external.QuoteDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -29,15 +28,15 @@ public class MissionEventConsumer {
 
     private final DemandRepository demandRepository;
     private final MissionRepository missionRepository;
-    private final NegociationClient negociationClient;
+    private final QuotePort quotePort;
 
     public MissionEventConsumer(
             DemandRepository demandRepository,
             MissionRepository missionRepository,
-            NegociationClient negociationClient) {
+            QuotePort quotePort) {
         this.demandRepository = demandRepository;
         this.missionRepository = missionRepository;
-        this.negociationClient = negociationClient;
+        this.quotePort = quotePort;
     }
 
     @RabbitListener(queues = RabbitMQConfig.Q_PAYMENT_CONFIRMED)
@@ -63,8 +62,6 @@ public class MissionEventConsumer {
                 return;
             }
 
-            // quoteId et category ne sont plus transmis par payment.confirmed —
-            // récupérés depuis la Demand, déjà renseignés lors de acceptQuote()
             String quoteId = demand.getQuoteId();
             String category = demand.getCategoryId();
 
@@ -73,6 +70,8 @@ public class MissionEventConsumer {
                 channel.basicNack(tag, false, false);
                 return;
             }
+
+            QuoteDto quote = quotePort.getQuoteById(quoteId);
 
             Mission mission = new Mission();
             mission.setId("msn_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
@@ -84,23 +83,18 @@ public class MissionEventConsumer {
             mission.setCategory(category);
             mission.setStatus(MissionStatus.EN_ATTENTE);
 
-            // ⚠️ TODO Priorité 0 : totalAmount et sequesteredAmount utilisent tous deux
-            // event.amount() en attendant confirmation Yannick — à corriger s'il précise
-            // deux valeurs distinctes.
-            mission.setTotalAmount(event.amount());
+            // totalAmount : source autoritaire = le devis (Négociations)
+            mission.setTotalAmount(quote.totalAmount());
+            // sequesteredAmount : montant réellement séquestré, confirmé par Paiement
             mission.setSequesteredAmount(event.amount());
             mission.setPaymentStatus("CONFIRMED");
-
-            QuoteSummary quote = negociationClient.getQuoteById(quoteId);
-            mission.setEstimatedDurationHours(quote.estimatedDurationHours());
-            mission.setEstimatedDurationHours(0);
 
             missionRepository.save(mission);
             log.info("Mission créée : id={} pour demande={}", mission.getId(), event.demandId());
 
             demand.setStatus(DemandStatus.EN_COURS);
             demand.setProviderId(event.providerId());
-            demand .setMissionId(mission.getId());
+            demand.setMissionId(mission.getId());
             demandRepository.save(demand);
             log.info("Demande {} passée en EN_COURS", event.demandId());
 
@@ -129,8 +123,6 @@ public class MissionEventConsumer {
                 return;
             }
 
-            // Idempotence : compensation uniquement si la demande est encore EN_COURS
-            // (si elle est déjà OUVERTE, un précédent payment.failed a déjà compensé)
             if (demand.getStatus() != DemandStatus.EN_COURS) {
                 log.warn("Idempotence : payment.failed ignoré, demande={} déjà en status={}",
                         event.demandId(), demand.getStatus());
