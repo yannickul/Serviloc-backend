@@ -1,6 +1,7 @@
 // application/service/AdminStatsService.java
 package com.serviloc.mission.application.service;
 
+import com.serviloc.mission.application.dto.response.AdminStatsResponse;
 import com.serviloc.mission.application.dto.response.DashboardAdminResponse;
 import com.serviloc.mission.application.dto.response.DemandResponse;
 import com.serviloc.mission.application.dto.response.PagedResponse;
@@ -62,5 +63,41 @@ public class AdminStatsService {
     public PagedResponse<DemandResponse> getAllDemands(
             DemandStatus status, int page, int limit) {
         return demandService.getAllDemands(status, page, limit);
+    }
+
+    public AdminStatsResponse getAdminStats() {
+        AdminStatsResponse response = new AdminStatsResponse();
+
+        long totalMissions = missionRepository.countAll();
+        long completedMissions = missionRepository.countByStatus(MissionStatus.TERMINEE);
+        long inProgressMissions = missionRepository.countByStatus(MissionStatus.EN_COURS);
+        long cancelledDemandsAsMissions = demandRepository.countByStatus(DemandStatus.ANNULEE);
+
+        response.setMissions(new AdminStatsResponse.MissionsStats(
+                totalMissions, completedMissions, inProgressMissions, cancelledDemandsAsMissions));
+
+        // TODO : dépend de la confirmation Yannick sur GET /internal/stats/financials
+        // (format + path, voir RAPPORT_SYNC_YANNICK.md points 1 et 2)
+        response.setFinancials(null);
+
+        // TODO : dépend de l'ajout d'un endpoint GET /internal/stats/users côté Service Utilisateurs
+        // (voir RAPPORT_SYNC_YANNICK.md point 4)
+        response.setUsers(null);
+
+        // TODO : dépend d'un endpoint équivalent côté Service Litiges (à développer par TK)
+        response.setLitiges(null);
+
+        return response;
+    }
+
+    // AdminStatsService.java — nouvelle méthode dédiée
+    public AdminStatsResponse.MissionsStats getMissionsStatsSlice() {
+        long totalMissions = missionRepository.countAll();
+        long completedMissions = missionRepository.countByStatus(MissionStatus.TERMINEE);
+        long inProgressMissions = missionRepository.countByStatus(MissionStatus.EN_COURS);
+        long cancelledDemandsAsMissions = demandRepository.countByStatus(DemandStatus.ANNULEE);
+
+        return new AdminStatsResponse.MissionsStats(
+                totalMissions, completedMissions, inProgressMissions, cancelledDemandsAsMissions);
     }
 }

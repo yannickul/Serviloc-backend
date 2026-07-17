@@ -15,9 +15,10 @@ public class Demand {
     private BudgetRange estimatedBudget;
     private String providerId;
     private String quoteId;
+    private String missionId;
     private Instant createdAt;
+    private Instant updatedAt;
 
-    // Getters / Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getClientId() { return clientId; }
@@ -40,8 +41,10 @@ public class Demand {
     public void setProviderId(String providerId) { this.providerId = providerId; }
     public String getQuoteId() { return quoteId; }
     public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
+    public String getMissionId() { return missionId; }
+    public void setMissionId(String missionId) { this.missionId = missionId; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-
-
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

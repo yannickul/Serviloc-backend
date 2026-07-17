@@ -2,22 +2,23 @@
 package com.serviloc.mission.application.service;
 
 import com.serviloc.mission.application.dto.request.CreateLitigeRequest;
+import com.serviloc.mission.application.dto.request.CreateStepsRequest;
 import com.serviloc.mission.application.dto.request.LocationDto;
 import com.serviloc.mission.application.dto.request.RateMissionRequest;
-import com.serviloc.mission.application.dto.response.MissionResponse;
-import com.serviloc.mission.application.dto.response.UserMissionStatsResponse;
+import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.port.in.MissionUseCase;
 import com.serviloc.mission.domain.event.*;
-import com.serviloc.mission.domain.exception.DoubleValidationAlreadyDoneException;
-import com.serviloc.mission.domain.exception.MissionNotFoundException;
-import com.serviloc.mission.domain.exception.UnauthorizedMissionAccessException;
+import com.serviloc.mission.domain.exception.*;
 import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.EvaluationRepository;
 import com.serviloc.mission.domain.repository.MissionRepository;
 import com.serviloc.mission.infrastructure.external.UpdateRatingRequest;
 import com.serviloc.mission.infrastructure.external.UtilisateurClient;
 import com.serviloc.mission.infrastructure.messaging.MissionEventPublisher;
+import com.serviloc.mission.infrastructure.persistence.entity.MissionJpaEntity;
+import com.serviloc.mission.infrastructure.persistence.entity.MissionStepJpaEntity;
 import com.serviloc.mission.infrastructure.persistence.entity.MissionValidationJpaEntity;
+import com.serviloc.mission.infrastructure.persistence.repository.MissionJpaRepository;
 import com.serviloc.mission.infrastructure.persistence.repository.MissionValidationJpaRepository;
 import com.serviloc.mission.infrastructure.persistence.repository.MissionStepJpaRepository;
 import com.serviloc.mission.application.port.out.PaymentPort;
@@ -26,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,6 +45,7 @@ public class MissionService implements MissionUseCase {
     private final PaymentPort paymentPort;
     private final MissionValidationJpaRepository validationRepository;
     private final MissionStepJpaRepository stepRepository;
+    private final MissionJpaRepository missionJpaRepository;
 
     public MissionService(
             MissionRepository missionRepository,
@@ -50,7 +54,8 @@ public class MissionService implements MissionUseCase {
             UtilisateurClient utilisateurClient,
             PaymentPort paymentPort,
             MissionValidationJpaRepository validationRepository,
-            MissionStepJpaRepository stepRepository) {
+            MissionStepJpaRepository stepRepository,
+            MissionJpaRepository missionJpaRepository) {
         this.missionRepository = missionRepository;
         this.evaluationRepository = evaluationRepository;
         this.eventPublisher = eventPublisher;
@@ -58,6 +63,7 @@ public class MissionService implements MissionUseCase {
         this.paymentPort = paymentPort;
         this.validationRepository = validationRepository;
         this.stepRepository = stepRepository;
+        this.missionJpaRepository = missionJpaRepository;
     }
 
     @Override
@@ -92,7 +98,7 @@ public class MissionService implements MissionUseCase {
 
     // Tâche 3 — POST /provider/missions/:id/start
     @Override
-    public void startMission(String missionId, String providerId) {
+    public StartMissionResponse startMission(String missionId, String providerId) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -100,10 +106,18 @@ public class MissionService implements MissionUseCase {
             throw new UnauthorizedMissionAccessException(providerId, missionId, "mission");
         }
 
-        // Contrainte métier section 18.1 : démarrage uniquement si EN_ATTENTE
         if (mission.getStatus() != MissionStatus.EN_ATTENTE) {
             throw new IllegalStateException(
                     "La mission " + missionId + " ne peut pas démarrer depuis le status " + mission.getStatus());
+        }
+
+        if (mission.getEstimatedDurationHours() <= 0) {
+            throw new MissionSetupIncompleteException(missionId, "durée estimée non définie");
+        }
+
+        List<MissionStepJpaEntity> steps = stepRepository.findByMissionId(missionId);
+        if (steps.isEmpty()) {
+            throw new MissionSetupIncompleteException(missionId, "aucune étape définie");
         }
 
         mission.setStatus(MissionStatus.EN_COURS);
@@ -112,11 +126,13 @@ public class MissionService implements MissionUseCase {
 
         eventPublisher.publishMissionStarted(
                 new MissionStartedEvent(mission.getId(), mission.getProviderId(), mission.getClientId()));
-    }
 
+        return new StartMissionResponse(
+                mission.getId(), mission.getStatus().name().toLowerCase(), mission.getStartedAt());
+    }
     // Tâche 4 — POST /provider/missions/:id/complete
     @Override
-    public void completeMission(String missionId, String providerId) {
+    public CompleteMissionResponse completeMission(String missionId, String providerId) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -129,7 +145,6 @@ public class MissionService implements MissionUseCase {
                     "La mission " + missionId + " doit être EN_COURS pour être complétée");
         }
 
-        // Idempotence : section 18.2 — un même rôle ne valide qu'une fois
         boolean alreadyValidated = validationRepository
                 .existsByMissionIdAndRole(missionId, "PROVIDER");
         if (alreadyValidated) {
@@ -146,11 +161,25 @@ public class MissionService implements MissionUseCase {
 
         eventPublisher.publishMissionValidated(
                 new MissionValidatedEvent(missionId, providerId, "PROVIDER"));
+
+        boolean clientAlsoValidated = validationRepository
+                .existsByMissionIdAndRole(missionId, "CLIENT");
+
+        if (clientAlsoValidated) {
+            finalizeMissionIfBothValidated(mission);
+            return new CompleteMissionResponse(
+                    missionId, "provider", true, "terminee",
+                    "Mission terminée — le client avait déjà validé, paiement libéré.");
+        }
+
+        return new CompleteMissionResponse(
+                missionId, "provider", false, mission.getStatus().name().toLowerCase(),
+                "En attente de la validation client.");
     }
 
     // Tâche 5 — POST /client/missions/:id/validate
     @Override
-    public void validateMission(String missionId, String clientId) {
+    public ValidateMissionResponse validateMission(String missionId, String clientId) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -163,7 +192,6 @@ public class MissionService implements MissionUseCase {
                     "La mission " + missionId + " doit être EN_COURS pour être validée");
         }
 
-        // Idempotence : section 18.2
         boolean alreadyValidated = validationRepository
                 .existsByMissionIdAndRole(missionId, "CLIENT");
         if (alreadyValidated) {
@@ -181,24 +209,75 @@ public class MissionService implements MissionUseCase {
         eventPublisher.publishMissionValidated(
                 new MissionValidatedEvent(missionId, clientId, "CLIENT"));
 
-        // Double validation atteinte → libération des fonds (section 11, Saga 2)
         boolean providerAlsoValidated = validationRepository
                 .existsByMissionIdAndRole(missionId, "PROVIDER");
 
         if (providerAlsoValidated) {
-            paymentPort.releaseTransaction(mission.getQuoteId());
-
-            mission.setStatus(MissionStatus.TERMINEE);
-            mission.setCompletedAt(Instant.now());
-            missionRepository.save(mission);
-
-            eventPublisher.publishMissionCompleted(
-                    new MissionCompletedEvent(
-                            missionId,
-                            mission.getClientId(),
-                            mission.getProviderId(),
-                            mission.getTotalAmount()));
+            finalizeMissionIfBothValidated(mission);
+            return new ValidateMissionResponse(
+                    missionId, "client", true, "libere", mission.getTotalAmount());
         }
+
+        return new ValidateMissionResponse(
+                missionId, "client", false, mission.getPaymentStatus(), null);
+    }
+
+    private void finalizeMissionIfBothValidated(Mission mission) {
+        paymentPort.releaseTransaction(mission.getTransactionId());
+        mission.setStatus(MissionStatus.TERMINEE);
+        mission.setCompletedAt(Instant.now());
+        missionRepository.save(mission);
+
+        eventPublisher.publishMissionCompleted(
+                new MissionCompletedEvent(
+                        mission.getId(),
+                        mission.getClientId(),
+                        mission.getProviderId(),
+                        mission.getTotalAmount(),
+                        mission.getTransactionId()));
+    }
+
+    @Override
+    @Transactional
+    public DefineStepsResponse defineSteps(String missionId, String providerId, CreateStepsRequest request) {
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionNotFoundException(missionId));
+
+        if (!mission.getProviderId().equals(providerId)) {
+            throw new UnauthorizedMissionAccessException(providerId, missionId, "mission");
+        }
+
+        if (mission.getStatus() != MissionStatus.EN_ATTENTE) {
+            throw new IllegalStateException(
+                    "Les étapes ne peuvent être définies que pour une mission EN_ATTENTE");
+        }
+
+        boolean alreadyDefined = !stepRepository.findByMissionId(missionId).isEmpty();
+        if (alreadyDefined) {
+            throw new StepsAlreadyDefinedException(missionId);
+        }
+
+        mission.setEstimatedDurationHours(request.getEstimatedDurationHours());
+        missionRepository.save(mission);
+
+        MissionJpaEntity missionRef = missionJpaRepository.getReferenceById(missionId);
+
+        List<StepResponse> responses = new ArrayList<>();
+        int autoOrder = 1;
+        for (CreateStepsRequest.StepInput input : request.getSteps()) {
+            MissionStepJpaEntity entity = new MissionStepJpaEntity();
+            entity.setId("step_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12));
+            entity.setMission(missionRef);
+            entity.setLabel(input.getLabel());
+            entity.setCompleted(false);
+            entity.setOrder(input.getOrder() != null ? input.getOrder() : autoOrder);
+            autoOrder++;
+
+            MissionStepJpaEntity saved = stepRepository.save(entity);
+            responses.add(new StepResponse(saved.getId(), saved.getLabel(), saved.isCompleted(), saved.getOrder()));
+        }
+
+        return new DefineStepsResponse(missionId, mission.getEstimatedDurationHours(), responses);
     }
 
     // Tâche 6 — PATCH /provider/missions/:id/steps/:stepId
@@ -225,8 +304,9 @@ public class MissionService implements MissionUseCase {
         );
     }
 
+
     @Override
-    public void rateAsClient(String missionId, String clientId, RateMissionRequest request) {
+    public RatingResponse rateAsClient(String missionId, String clientId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -241,11 +321,11 @@ public class MissionService implements MissionUseCase {
 
         Evaluation evaluation = buildEvaluation(
                 missionId, clientId, mission.getProviderId(), "PROVIDER", request);
-        evaluationRepository.save(evaluation);
+        Evaluation saved = evaluationRepository.save(evaluation);
 
         List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getProviderId());
         double average = evaluations.stream()
-                .mapToInt(e -> e.getRating())
+                .mapToInt(Evaluation::getRating)
                 .average()
                 .orElse(request.getRating().doubleValue());
 
@@ -261,10 +341,12 @@ public class MissionService implements MissionUseCase {
         }
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getProviderId(), "PROVIDER", request.getRating()));
+
+        return new RatingResponse(saved.getId(), mission.getProviderId(), "provider", request.getRating());
     }
 
     @Override
-    public void rateAsProvider(String missionId, String providerId, RateMissionRequest request) {
+    public RatingResponse rateAsProvider(String missionId, String providerId, RateMissionRequest request) {
         Mission mission = missionRepository.findById(missionId)
                 .orElseThrow(() -> new MissionNotFoundException(missionId));
 
@@ -279,11 +361,11 @@ public class MissionService implements MissionUseCase {
 
         Evaluation evaluation = buildEvaluation(
                 missionId, providerId, mission.getClientId(), "CLIENT", request);
-        evaluationRepository.save(evaluation);
+        Evaluation saved = evaluationRepository.save(evaluation);
 
         List<Evaluation> evaluations = evaluationRepository.findByTargetId(mission.getClientId());
         double average = evaluations.stream()
-                .mapToInt(e -> e.getRating())
+                .mapToInt(Evaluation::getRating)
                 .average()
                 .orElse(request.getRating().doubleValue());
 
@@ -300,6 +382,8 @@ public class MissionService implements MissionUseCase {
 
         eventPublisher.publishEvaluationCreated(
                 new EvaluationCreatedEvent(missionId, mission.getClientId(), "CLIENT", request.getRating()));
+
+        return new RatingResponse(saved.getId(), mission.getClientId(), "client", request.getRating());
     }
     // Tâche 8a — POST /client/missions/:id/litige
     @Override
@@ -357,6 +441,7 @@ public class MissionService implements MissionUseCase {
         evaluation.setTargetId(targetId);
         evaluation.setTargetRole(targetRole);
         evaluation.setRating(request.getRating());
+        evaluation.setCriteria(request.getCriteria());
         evaluation.setComment(request.getComment());
         evaluation.setCreatedAt(Instant.now());
         return evaluation;
@@ -384,6 +469,14 @@ public class MissionService implements MissionUseCase {
             loc.setLng(mission.getLocation().lng());
             loc.setAddress(mission.getLocation().address());
             response.setLocation(loc);
+        }
+
+        if (mission.getSteps() != null) {
+            List<StepResponse> steps = mission.getSteps().stream()
+                    .sorted(Comparator.comparingInt(MissionStep::getOrder))
+                    .map(s -> new StepResponse(s.getId(), s.getLabel(), s.isCompleted(), s.getOrder()))
+                    .collect(Collectors.toList());
+            response.setSteps(steps);
         }
 
         return response;

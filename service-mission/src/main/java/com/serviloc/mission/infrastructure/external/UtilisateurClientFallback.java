@@ -52,4 +52,10 @@ public class UtilisateurClientFallback implements UtilisateurClient {
     public void updateRating(String id, UpdateRatingRequest request) {
         log.warn("UtilisateurClient indisponible — updateRating({}) mis en outbox RabbitMQ", id);
     }
+
+    @Override
+    public UserStatsResponse getUserStats() {
+        log.warn("UtilisateurClient indisponible — getUserStats() fallback à zéro");
+        return new UserStatsResponse(0, 0, 0);
+    }
 }

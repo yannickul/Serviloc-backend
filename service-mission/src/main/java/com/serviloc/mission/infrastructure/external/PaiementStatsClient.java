@@ -2,6 +2,7 @@ package com.serviloc.mission.infrastructure.external;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -9,12 +10,12 @@ import org.springframework.web.bind.annotation.RequestParam;
         fallback = PaiementStatsClientFallback.class)
 public interface PaiementStatsClient {
 
-    @GetMapping("/stats")
+    @GetMapping("/stats/financials")
     FinancialStatsDto getFinancialStats(
             @RequestParam String from,
             @RequestParam String to
     );
 
-    @PostMapping("/transactions/release")
-    void releaseTransaction(@RequestParam String transactionId);
+    @PostMapping("/transactions/{transactionId}/release")
+    void releaseTransaction(@PathVariable String transactionId);
 }

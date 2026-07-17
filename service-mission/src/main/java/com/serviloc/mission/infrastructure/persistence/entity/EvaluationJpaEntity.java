@@ -1,4 +1,3 @@
-// EvaluationJpaEntity.java
 package com.serviloc.mission.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
@@ -32,7 +31,7 @@ public class EvaluationJpaEntity {
     @CollectionTable(name = "evaluation_criteria", joinColumns = @JoinColumn(name = "evaluation_id"))
     @MapKeyColumn(name = "criteria_key")
     @Column(name = "criteria_value")
-    private Map<String, Integer> criteria;
+    private Map<String, String> criteria;
 
     @Column(columnDefinition = "TEXT")
     private String comment;
@@ -57,8 +56,8 @@ public class EvaluationJpaEntity {
     public void setTargetRole(String targetRole) { this.targetRole = targetRole; }
     public int getRating() { return rating; }
     public void setRating(int rating) { this.rating = rating; }
-    public Map<String, Integer> getCriteria() { return criteria; }
-    public void setCriteria(Map<String, Integer> criteria) { this.criteria = criteria; }
+    public Map<String, String> getCriteria() { return criteria; }
+    public void setCriteria(Map<String, String> criteria) { this.criteria = criteria; }
     public String getComment() { return comment; }
     public void setComment(String comment) { this.comment = comment; }
     public Instant getCreatedAt() { return createdAt; }

@@ -1,14 +1,12 @@
-// domain/event/PaymentConfirmedEvent.java
 package com.serviloc.mission.domain.event;
 
+import java.math.BigDecimal;
+
 public record PaymentConfirmedEvent(
-        String paymentId,
+        String transactionId,
         String demandId,
-        String quoteId,
         String clientId,
         String providerId,
-        java.math.BigDecimal totalAmount,
-        java.math.BigDecimal sequesteredAmount,
-        String category,
-        int estimatedDurationHours
+        BigDecimal amount,
+        String externalRef
 ) {}

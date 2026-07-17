@@ -1,10 +1,6 @@
-// adapter/rest/AdminMissionController.java
 package com.serviloc.mission.adapter.rest;
 
-import com.serviloc.mission.application.dto.response.ApiResponse;
-import com.serviloc.mission.application.dto.response.DashboardAdminResponse;
-import com.serviloc.mission.application.dto.response.DemandResponse;
-import com.serviloc.mission.application.dto.response.PagedResponse;
+import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.service.AdminStatsService;
 import com.serviloc.mission.domain.exception.UnauthorizedMissionAccessException;
 import com.serviloc.mission.domain.model.DemandStatus;
@@ -19,18 +15,6 @@ public class AdminMissionController {
 
     public AdminMissionController(AdminStatsService adminStatsService) {
         this.adminStatsService = adminStatsService;
-    }
-
-    @GetMapping("/stats")
-    public ResponseEntity<ApiResponse<DashboardAdminResponse>> getStats(
-            @RequestHeader("X-User-Role") String role) {
-
-        if (!role.equals("admin")) {
-            throw new UnauthorizedMissionAccessException("non-admin", "stats");
-        }
-
-        return ResponseEntity.ok(
-                ApiResponse.success(adminStatsService.getAdminDashboard()));
     }
 
     @GetMapping("/demands")

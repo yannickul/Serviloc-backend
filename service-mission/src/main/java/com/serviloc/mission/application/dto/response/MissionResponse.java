@@ -4,6 +4,7 @@ package com.serviloc.mission.application.dto.response;
 import com.serviloc.mission.application.dto.request.LocationDto;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public class MissionResponse {
 
@@ -21,6 +22,7 @@ public class MissionResponse {
     private int estimatedDurationHours;
     private Instant completedAt;
     private LocationDto location;
+    private List<StepResponse> steps;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -50,4 +52,6 @@ public class MissionResponse {
     public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
     public LocationDto getLocation() { return location; }
     public void setLocation(LocationDto location) { this.location = location; }
+    public List<StepResponse> getSteps() { return steps; }
+    public void setSteps(List<StepResponse> steps) { this.steps = steps; }
 }

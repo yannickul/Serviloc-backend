@@ -1,6 +1,5 @@
 package com.serviloc.mission.domain.model;
 
-
 import java.time.Instant;
 import java.util.Map;
 
@@ -11,7 +10,7 @@ public class Evaluation {
     private String targetId;
     private String targetRole;
     private int rating;
-    private Map<String, Integer> criteria;
+    private Map<String, String> criteria;
     private String comment;
     private Instant createdAt;
 
@@ -27,8 +26,8 @@ public class Evaluation {
     public void setTargetRole(String targetRole) { this.targetRole = targetRole; }
     public int getRating() { return rating; }
     public void setRating(int rating) { this.rating = rating; }
-    public Map<String, Integer> getCriteria() { return criteria; }
-    public void setCriteria(Map<String, Integer> criteria) { this.criteria = criteria; }
+    public Map<String, String> getCriteria() { return criteria; }
+    public void setCriteria(Map<String, String> criteria) { this.criteria = criteria; }
     public String getComment() { return comment; }
     public void setComment(String comment) { this.comment = comment; }
     public Instant getCreatedAt() { return createdAt; }

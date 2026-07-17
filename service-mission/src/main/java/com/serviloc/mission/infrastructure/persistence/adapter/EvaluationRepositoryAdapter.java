@@ -1,4 +1,3 @@
-// infrastructure/persistence/adapter/EvaluationRepositoryAdapter.java
 package com.serviloc.mission.infrastructure.persistence.adapter;
 
 import com.serviloc.mission.domain.model.Evaluation;
@@ -46,11 +45,9 @@ public class EvaluationRepositoryAdapter implements EvaluationRepository {
         entity.setTargetId(evaluation.getTargetId());
         entity.setTargetRole(evaluation.getTargetRole());
         entity.setRating(evaluation.getRating());
+        entity.setCriteria(evaluation.getCriteria());
         entity.setComment(evaluation.getComment());
         entity.setCreatedAt(evaluation.getCreatedAt());
-        // criteria : non géré dans RateMissionRequest pour l'instant (champ optionnel)
-        // à brancher en Sprint 3 si le frontend envoie des critères détaillés
-        entity.setCriteria(null);
         return entity;
     }
 
@@ -62,6 +59,7 @@ public class EvaluationRepositoryAdapter implements EvaluationRepository {
         evaluation.setTargetId(entity.getTargetId());
         evaluation.setTargetRole(entity.getTargetRole());
         evaluation.setRating(entity.getRating());
+        evaluation.setCriteria(entity.getCriteria());
         evaluation.setComment(entity.getComment());
         evaluation.setCreatedAt(entity.getCreatedAt());
         return evaluation;

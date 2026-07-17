@@ -5,6 +5,7 @@ import com.serviloc.mission.application.dto.request.CreateLitigeRequest;
 import com.serviloc.mission.application.dto.request.RateMissionRequest;
 import com.serviloc.mission.application.dto.response.ApiResponse;
 import com.serviloc.mission.application.dto.response.MissionResponse;
+import com.serviloc.mission.application.dto.response.ValidateMissionResponse;
 import com.serviloc.mission.application.port.in.MissionUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -41,12 +42,12 @@ public class ClientMissionController {
     }
 
     @PostMapping("/missions/{id}/validate")
-    public ResponseEntity<ApiResponse<Void>> validateMission(
+    public ResponseEntity<ApiResponse<ValidateMissionResponse>> validateMission(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String clientId) {
 
-        missionUseCase.validateMission(id, clientId);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        ValidateMissionResponse response = missionUseCase.validateMission(id, clientId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/missions/{id}/rate")

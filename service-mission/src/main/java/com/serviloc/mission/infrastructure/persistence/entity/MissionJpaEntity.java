@@ -20,6 +20,9 @@ public class MissionJpaEntity {
     @Column(name = "quote_id", nullable = false, length = 36)
     private String quoteId;
 
+    @Column(name = "transaction_id",  length = 36)
+    private String transactionId;
+
     @Column(name = "client_id", nullable = false, length = 36)
     private String clientId;
 
@@ -68,6 +71,8 @@ public class MissionJpaEntity {
     public void setDemandId(String demandId) { this.demandId = demandId; }
     public String getQuoteId() { return quoteId; }
     public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public String getClientId() { return clientId; }
     public void setClientId(String clientId) { this.clientId = clientId; }
     public String getProviderId() { return providerId; }

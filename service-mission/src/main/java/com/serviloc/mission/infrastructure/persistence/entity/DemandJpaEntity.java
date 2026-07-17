@@ -54,131 +54,58 @@ public class DemandJpaEntity {
     @Column(name = "quote_id", length = 36)
     private String quoteId;
 
+    @Column(name = "mission_id", length = 36)
+    private String missionId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = Instant.now();
+        updatedAt = Instant.now();
     }
 
-    public String getId() {
-        return id;
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = Instant.now();
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
-    public String getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(String categoryId) {
-        this.categoryId = categoryId;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public List<String> getPhotoIds() {
-        return photoIds;
-    }
-
-    public void setPhotoIds(List<String> photoIds) {
-        this.photoIds = photoIds;
-    }
-
-    public double getLat() {
-        return lat;
-    }
-
-    public void setLat(double lat) {
-        this.lat = lat;
-    }
-
-    public double getLng() {
-        return lng;
-    }
-
-    public void setLng(double lng) {
-        this.lng = lng;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public boolean isUrgent() {
-        return isUrgent;
-    }
-
-    public void setIsUrgent(boolean urgent) {
-        isUrgent = urgent;
-    }
-
-    public BigDecimal getBudgetMin() {
-        return budgetMin;
-    }
-
-    public void setBudgetMin(BigDecimal budgetMin) {
-        this.budgetMin = budgetMin;
-    }
-
-    public BigDecimal getBudgetMax() {
-        return budgetMax;
-    }
-
-    public void setBudgetMax(BigDecimal budgetMax) {
-        this.budgetMax = budgetMax;
-    }
-
-    public String getProviderId() {
-        return providerId;
-    }
-
-    public void setProviderId(String providerId) {
-        this.providerId = providerId;
-    }
-
-    public String getQuoteId() {
-        return quoteId;
-    }
-
-    public void setQuoteId(String quoteId) {
-        this.quoteId = quoteId;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getClientId() { return clientId; }
+    public void setClientId(String clientId) { this.clientId = clientId; }
+    public String getCategoryId() { return categoryId; }
+    public void setCategoryId(String categoryId) { this.categoryId = categoryId; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public List<String> getPhotoIds() { return photoIds; }
+    public void setPhotoIds(List<String> photoIds) { this.photoIds = photoIds; }
+    public double getLat() { return lat; }
+    public void setLat(double lat) { this.lat = lat; }
+    public double getLng() { return lng; }
+    public void setLng(double lng) { this.lng = lng; }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public boolean isUrgent() { return isUrgent; }
+    public void setIsUrgent(boolean urgent) { isUrgent = urgent; }
+    public BigDecimal getBudgetMin() { return budgetMin; }
+    public void setBudgetMin(BigDecimal budgetMin) { this.budgetMin = budgetMin; }
+    public BigDecimal getBudgetMax() { return budgetMax; }
+    public void setBudgetMax(BigDecimal budgetMax) { this.budgetMax = budgetMax; }
+    public String getProviderId() { return providerId; }
+    public void setProviderId(String providerId) { this.providerId = providerId; }
+    public String getQuoteId() { return quoteId; }
+    public void setQuoteId(String quoteId) { this.quoteId = quoteId; }
+    public String getMissionId() { return missionId; }
+    public void setMissionId(String missionId) { this.missionId = missionId; }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }
