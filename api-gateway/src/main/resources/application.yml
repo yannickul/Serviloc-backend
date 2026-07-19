@@ -40,7 +40,7 @@ spring:
         - id: utilisateurs-client
           uri: lb://service-utilisateurs
           predicates:
-            - Path=/v1/client/me
+            - Path=/v1/client/me, /v1/client/profile
           filters:
             - StripPrefix=1
             - JwtAuthFilter
@@ -79,6 +79,23 @@ spring:
               args:
                 redis-rate-limiter.replenishRate: 50
                 redis-rate-limiter.burstCapacity: 100
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
+
+        # GET /v1/user/{id} : profil simplifié, accessible à tout rôle authentifié
+        # (chemin sans préfixe /client, /provider, /admin, /agent → RoleAuthFilter
+        # laisse passer sans vérification de rôle, seul JwtAuthFilter s'applique).
+        - id: utilisateurs-user
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/user/{id}
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@roleKeyResolver}"
 
@@ -353,6 +370,9 @@ eureka:
 jwt:
   secret: ${JWT_SECRET}
   issuer: serviloc
+
+internal:
+  token: ${INTERNAL_TOKEN}
 
 rate-limiting:
   replenish-rate: 10

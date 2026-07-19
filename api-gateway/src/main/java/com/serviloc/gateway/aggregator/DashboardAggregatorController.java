@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -26,20 +31,19 @@ import java.util.function.Consumer;
  * JwtAuthFilter/RoleAuthFilter (qui ne s'appliquent qu'aux Routes déclarées en YAML).
  *
  * ── Dégradation gracieuse ────────────────────────────────────────────────────
- * Si un service downstream est indisponible (ou pas encore mergé — cf. service-missions
- * et service-litiges au moment de l'écriture), le champ correspondant revient à `null`
- * ou `[]` plutôt que de faire échouer tout le dashboard (voir DownstreamGateway).
+ * Si un service downstream est indisponible, le champ correspondant revient à
+ * `null` / `[]` plutôt que de faire échouer tout le dashboard (voir DownstreamGateway).
  *
- * ── ⚠️ Endpoints internes assumés (à confirmer avec les équipes concernées) ────
- * Documentés en détail dans /INTERNAL_CONTRACT_AGGREGATOR.md à la racine du repo :
- *   - service-missions : /internal/demands/recent, /internal/missions/recent,
- *                         /internal/missions/stats/provider/{id}, /internal/stats/summary,
- *                         /internal/stats/demands-missions, /internal/stats/popular-categories
- *   - service-litiges   : /internal/litiges/active
- *   - service-utilisateurs : /internal/providers/top (à ajouter — n'existe pas encore)
- * Les endpoints déjà réels (service-utilisateurs /client|provider/me, service-paiement
- * /internal/stats/financials, /provider/earnings, /admin/transactions, service-utilisateurs
- * /admin/providers, service-negociations /client/conversations) sont appelés tels quels.
+ * ── Endpoints downstream utilisés ────────────────────────────────────────────
+ * Vérifiés sur le code réel (branches developer/newtests/tests) — détail complet et
+ * justification de chaque choix dans /AUDIT_AGREGATEUR_GATEWAY.md à la racine du repo.
+ * Gaps encore réels côté downstream (non résolus par le Gateway, cf. audit §3-4) :
+ *   - provider/dashboard.metrics.trends : aucune donnée historique nulle part → valeurs neutres.
+ *   - admin/dashboard.pendingValidations : filtre `status` non implémenté côté service-utilisateurs
+ *     (transmis à l'équipe concernée) → renvoie actuellement tous les prestataires, pas seulement
+ *     ceux en attente de validation.
+ *   - admin/stats.topProviders : endpoint /internal/providers/top toujours absent côté
+ *     service-utilisateurs → tableau vide en attendant.
  */
 @RestController
 public class DashboardAggregatorController {
@@ -67,14 +71,16 @@ public class DashboardAggregatorController {
                 .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        // ⚠️ Assumé — service-missions pas encore mergé (cf. INTERNAL_CONTRACT_AGGREGATOR.md)
+        // GET /client/demands n'est pas trié côté service-missions → on demande une page plus
+        // large et on trie nous-mêmes par createdAt desc avant de tronquer à 5 (audit §1.2).
         Mono<JsonNode> recentDemandsMono = gateway.getJson(
-                        "lb://service-missions/internal/demands/recent?clientId=" + userId + "&limit=5",
-                        h -> {})
+                        "lb://service-missions/client/demands?page=1&limit=20",
+                        h -> h.set("X-User-Id", userId))
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createArrayNode());
 
         Mono<JsonNode> conversationsMono = gateway.getJson(
-                        "lb://service-negociations/client/conversations?limit=100",
+                        "lb://service-negociations/client/conversations?page=1&limit=100",
                         h -> {
                             h.set("X-User-Id", userId);
                             h.set("X-User-Role", "CLIENT");
@@ -85,7 +91,7 @@ public class DashboardAggregatorController {
         return Mono.zip(profileMono, recentDemandsMono, conversationsMono)
                 .map(t -> {
                     JsonNode profile = t.getT1();
-                    JsonNode recentDemands = t.getT2();
+                    JsonNode recentDemands = sortDescAndTruncate(t.getT2(), "createdAt", 5);
                     JsonNode conversations = t.getT3();
 
                     int unreadMessages = 0;
@@ -108,7 +114,7 @@ public class DashboardAggregatorController {
 
                     ObjectNode data = mapper.createObjectNode();
                     data.set("profile", profile);
-                    data.set("recentDemands", recentDemands.isArray() ? recentDemands : mapper.createArrayNode());
+                    data.set("recentDemands", recentDemands);
                     data.set("financialSummary", financialSummary);
                     data.put("unreadMessages", unreadMessages);
 
@@ -131,18 +137,21 @@ public class DashboardAggregatorController {
                 .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        // ⚠️ Assumé — service-missions
-        Mono<JsonNode> recentMissionsMono = gateway.getJson(
-                        "lb://service-missions/internal/missions/recent?providerId=" + userId + "&limit=5",
-                        h -> {})
+        // GET /provider/missions renvoie TOUTE la liste, non triée (audit §2.2/§5.3) : on
+        // réutilise cette même liste pour recentMissions (triée, tronquée à 5) ET pour
+        // missionsThisMonth (filtrée sur le mois courant), faute d'endpoint dédié.
+        Mono<JsonNode> allMissionsMono = gateway.getJson(
+                        "lb://service-missions/provider/missions",
+                        h -> h.set("X-User-Id", userId))
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        // ⚠️ Assumé — service-missions : { missionsThisMonth, availableDemandsCount,
-        //             trends: { missions:{value,direction,subtext}, earnings:{...}, rating:{...} } }
-        Mono<JsonNode> missionsStatsMono = gateway.getJson(
-                        "lb://service-missions/internal/missions/stats/provider/" + userId,
-                        h -> {})
-                .defaultIfEmpty(mapper.createObjectNode());
+        // GET /provider/demands (categoryId optionnel) : pas de compteur dédié, .size() de la liste.
+        Mono<JsonNode> availableDemandsMono = gateway.getJson(
+                        "lb://service-missions/provider/demands",
+                        h -> h.set("X-User-Id", userId))
+                .map(gateway::unwrapData)
+                .defaultIfEmpty(mapper.createArrayNode());
 
         Mono<JsonNode> earningsMono = gateway.getJson(
                         "lb://service-paiement/provider/earnings?limit=1",
@@ -153,29 +162,33 @@ public class DashboardAggregatorController {
                 .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        return Mono.zip(profileMono, recentMissionsMono, missionsStatsMono, earningsMono)
+        return Mono.zip(profileMono, allMissionsMono, availableDemandsMono, earningsMono)
                 .map(t -> {
                     JsonNode profile = t.getT1();
-                    JsonNode recentMissions = t.getT2();
-                    JsonNode missionsStats = t.getT3();
+                    JsonNode allMissions = t.getT2();
+                    JsonNode availableDemands = t.getT3();
                     JsonNode earnings = t.getT4();
 
+                    ArrayNode recentMissions = sortDescAndTruncate(allMissions, "startedAt", 5);
+                    int missionsThisMonth = countThisMonth(allMissions, "startedAt");
+                    int availableDemandsCount = availableDemands.isArray() ? availableDemands.size() : 0;
+
                     ObjectNode metrics = mapper.createObjectNode();
-                    metrics.set("missionsThisMonth", numberOr(missionsStats.path("missionsThisMonth"), 0));
+                    metrics.put("missionsThisMonth", missionsThisMonth);
                     JsonNode netEarnings = earnings.has("monthlyTotal")
                             ? earnings.path("monthlyTotal")
                             : profile.path("monthlyEarnings");
                     metrics.set("netEarnings", numberOr(netEarnings, 0));
                     metrics.set("averageRating", numberOr(profile.path("rating"), 0));
-                    metrics.set("availableDemandsCount", numberOr(missionsStats.path("availableDemandsCount"), 0));
-                    metrics.set("trends", missionsStats.has("trends")
-                            ? missionsStats.get("trends")
-                            : defaultTrends());
+                    metrics.put("availableDemandsCount", availableDemandsCount);
+                    // Aucune donnée historique disponible nulle part pour calculer une vraie
+                    // variation (audit §2, ligne "trends") → valeurs neutres documentées.
+                    metrics.set("trends", defaultTrends());
 
                     ObjectNode data = mapper.createObjectNode();
                     data.set("profile", profile);
                     data.set("metrics", metrics);
-                    data.set("recentMissions", recentMissions.isArray() ? recentMissions : mapper.createArrayNode());
+                    data.set("recentMissions", recentMissions);
                     data.set("availability", profile.path("availability"));
 
                     return ResponseEntity.ok(envelope(data));
@@ -195,15 +208,18 @@ public class DashboardAggregatorController {
             h.set("X-User-Role", "ADMIN");
         };
 
-        // ⚠️ Assumé — service-missions : { activeDemands:{value,trend}, ongoingMissions:{value,trend} }
-        Mono<JsonNode> missionsSummaryMono = gateway.getJson(
-                        "lb://service-missions/internal/stats/summary", h -> {})
+        // Source unique demands+missions pour admin/dashboard ET admin/stats (audit §3.1/§4.1-2).
+        Mono<JsonNode> missionsDashboardMono = gateway.getInternalJson(
+                        "lb://service-missions/internal/dashboard/missions")
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        Mono<JsonNode> financialsMono = gateway.getJson(
-                        "lb://service-paiement/internal/stats/financials", h -> {})
+        Mono<JsonNode> financialsMono = gateway.getInternalJson(
+                        "lb://service-paiement/internal/stats/financials")
                 .defaultIfEmpty(mapper.createObjectNode());
 
+        // ⚠️ Le paramètre status est ignoré côté service-utilisateurs (audit §3.3) : renvoie
+        // actuellement TOUS les prestataires, pas seulement ceux en attente de validation.
         Mono<JsonNode> pendingValidationsMono = gateway.getJson(
                         "lb://service-utilisateurs/admin/providers?status=pending_verification&limit=5",
                         adminHeaders)
@@ -211,14 +227,26 @@ public class DashboardAggregatorController {
                 .map(d -> d.path("providers"))
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        // ⚠️ Assumé — service-litiges
-        Mono<JsonNode> activeLitigesMono = gateway.getJson(
-                        "lb://service-litiges/internal/litiges/active?limit=5", h -> {})
+        // Pas d'endpoint "liste des litiges actifs" dédié : /admin/litiges (pagination 0-indexée,
+        // un seul statut par appel) → 2 appels parallèles OUVERT + EN_COURS, fusionnés (audit §3.4).
+        Mono<JsonNode> litigesOuvertMono = gateway.getJson(
+                        "lb://service-litiges/admin/litiges?status=OUVERT&page=0&limit=5",
+                        adminHeaders)
+                .map(gateway::unwrapData)
+                .map(d -> d.path("data"))
+                .defaultIfEmpty(mapper.createArrayNode());
+        Mono<JsonNode> litigesEnCoursMono = gateway.getJson(
+                        "lb://service-litiges/admin/litiges?status=EN_COURS&page=0&limit=5",
+                        adminHeaders)
+                .map(gateway::unwrapData)
+                .map(d -> d.path("data"))
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        // ⚠️ Assumé — service-missions
-        Mono<JsonNode> popularCategoriesMono = gateway.getJson(
-                        "lb://service-missions/internal/stats/popular-categories?limit=6", h -> {})
+        // service-missions ne consomme pas encore /internal/categories/stats (audit §3.5) :
+        // on appelle directement service-categories, seul endroit où demandCount existe vraiment.
+        Mono<JsonNode> popularCategoriesMono = gateway.getInternalJson(
+                        "lb://service-categories/internal/categories/stats")
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createArrayNode());
 
         Mono<JsonNode> recentTransactionsMono = gateway.getJson(
@@ -228,21 +256,27 @@ public class DashboardAggregatorController {
                 .map(d -> d.path("transactions"))
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        return Mono.zip(missionsSummaryMono, financialsMono, pendingValidationsMono,
-                        activeLitigesMono, popularCategoriesMono, recentTransactionsMono)
+        return Mono.zip(missionsDashboardMono, financialsMono, pendingValidationsMono,
+                        Mono.zip(litigesOuvertMono, litigesEnCoursMono),
+                        popularCategoriesMono, recentTransactionsMono)
                 .map(t -> {
-                    JsonNode missionsSummary = t.getT1();
+                    JsonNode missionsDashboard = t.getT1();
                     JsonNode financials = t.getT2();
                     JsonNode pendingValidations = t.getT3();
-                    JsonNode activeLitiges = t.getT4();
-                    JsonNode popularCategories = t.getT5();
+                    JsonNode activeLitiges = mergeArrays(t.getT4().getT1(), t.getT4().getT2());
+                    JsonNode popularCategories = sortDescAndTruncate(t.getT5(), "demandCount", 6);
                     JsonNode recentTransactions = t.getT6();
 
+                    long open = missionsDashboard.path("openDemands").asLong(0);
+                    long inProgress = missionsDashboard.path("inProgressDemands").asLong(0);
+                    long totalMissions = missionsDashboard.path("totalMissions").asLong(0);
+                    long completedMissions = missionsDashboard.path("completedMissions").asLong(0);
+                    long disputedMissions = missionsDashboard.path("disputedMissions").asLong(0);
+
                     ObjectNode metrics = mapper.createObjectNode();
-                    metrics.set("activeDemands", missionsSummary.has("activeDemands")
-                            ? missionsSummary.get("activeDemands") : metricPlaceholder());
-                    metrics.set("ongoingMissions", missionsSummary.has("ongoingMissions")
-                            ? missionsSummary.get("ongoingMissions") : metricPlaceholder());
+                    metrics.set("activeDemands", metricValueLong(open + inProgress));
+                    metrics.set("ongoingMissions",
+                            metricValueLong(totalMissions - completedMissions - disputedMissions));
                     metrics.set("monthlyRevenue", metricValue(financials.path("totalRevenue")));
                     metrics.set("commissionEarned", metricValue(financials.path("commissionEarned")));
 
@@ -263,49 +297,61 @@ public class DashboardAggregatorController {
 
     @GetMapping("/v1/admin/stats")
     public Mono<ResponseEntity<ObjectNode>> adminStats(
-            @RequestHeader("X-User-Id") String userId,
             @RequestParam(required = false, defaultValue = "2026-01-01T00:00:00") String from,
             @RequestParam(required = false, defaultValue = "2099-12-31T23:59:59") String to) {
 
-        // ⚠️ Assumé — service-missions : { demands:{total,open,inProgress,completed,cancelled},
-        //             missions:{total,completed,inDispute,completionRate} }
-        Mono<JsonNode> demandsMissionsMono = gateway.getJson(
-                        "lb://service-missions/internal/stats/demands-missions", h -> {})
+        // Même endpoint que admin/dashboard : couvre demands ET missions en un seul appel
+        // (audit §4.1-2 — remplace les 2 endpoints /internal/stats/summary + /demands-missions
+        // qui n'existent pas sous cette forme).
+        Mono<JsonNode> missionsDashboardMono = gateway.getInternalJson(
+                        "lb://service-missions/internal/dashboard/missions")
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        Mono<JsonNode> financialsMono = gateway.getJson(
-                        "lb://service-paiement/internal/stats/financials?from=" + from + "&to=" + to, h -> {})
+        Mono<JsonNode> financialsMono = gateway.getInternalJson(
+                        "lb://service-paiement/internal/stats/financials?from=" + from + "&to=" + to)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        // ⚠️ Assumé — service-utilisateurs : endpoint /internal/providers/top à ajouter
-        Mono<JsonNode> topProvidersMono = gateway.getJson(
-                        "lb://service-utilisateurs/internal/providers/top?limit=4", h -> {})
+        // ⚠️ Endpoint toujours absent côté service-utilisateurs (audit §4.4) → transmis à l'équipe.
+        Mono<JsonNode> topProvidersMono = gateway.getInternalJson(
+                        "lb://service-utilisateurs/internal/providers/top?limit=4")
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        // ⚠️ Assumé — service-missions
-        Mono<JsonNode> popularCategoriesMono = gateway.getJson(
-                        "lb://service-missions/internal/stats/popular-categories?limit=6", h -> {})
+        Mono<JsonNode> popularCategoriesMono = gateway.getInternalJson(
+                        "lb://service-categories/internal/categories/stats")
+                .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createArrayNode());
 
-        return Mono.zip(demandsMissionsMono, financialsMono, topProvidersMono, popularCategoriesMono)
+        return Mono.zip(missionsDashboardMono, financialsMono, topProvidersMono, popularCategoriesMono)
                 .map(t -> {
-                    JsonNode demandsMissions = t.getT1();
+                    JsonNode missionsDashboard = t.getT1();
                     JsonNode financials = t.getT2();
                     JsonNode topProviders = t.getT3();
-                    JsonNode popularCategories = t.getT4();
+                    JsonNode popularCategories = sortDescAndTruncate(t.getT4(), "demandCount", 6);
+
+                    ObjectNode demands = mapper.createObjectNode();
+                    demands.set("total", numberOr(missionsDashboard.path("totalDemands"), 0));
+                    demands.set("open", numberOr(missionsDashboard.path("openDemands"), 0));
+                    demands.set("inProgress", numberOr(missionsDashboard.path("inProgressDemands"), 0));
+                    demands.set("completed", numberOr(missionsDashboard.path("completedDemands"), 0));
+                    demands.set("cancelled", numberOr(missionsDashboard.path("cancelledDemands"), 0));
+
+                    ObjectNode missions = mapper.createObjectNode();
+                    missions.set("total", numberOr(missionsDashboard.path("totalMissions"), 0));
+                    missions.set("completed", numberOr(missionsDashboard.path("completedMissions"), 0));
+                    missions.set("inDispute", numberOr(missionsDashboard.path("disputedMissions"), 0));
+                    missions.set("completionRate", numberOr(missionsDashboard.path("completionRate"), 0));
 
                     ObjectNode financialsOut = mapper.createObjectNode();
                     financialsOut.set("totalRevenue", numberOr(financials.path("totalRevenue"), 0));
                     financialsOut.set("commissionEarned", numberOr(financials.path("commissionEarned"), 0));
                     financialsOut.set("sequesteredAmount", numberOr(financials.path("sequesteredAmount"), 0));
-                    financialsOut.set("periodBreakdown", financials.has("periodBreakdown")
-                            ? financials.get("periodBreakdown") : mapper.createArrayNode());
+                    // periodBreakdown : aucun service ne fournit de ventilation mensuelle (audit §4.3).
+                    financialsOut.set("periodBreakdown", mapper.createArrayNode());
 
                     ObjectNode data = mapper.createObjectNode();
-                    data.set("demands", demandsMissions.has("demands")
-                            ? demandsMissions.get("demands") : mapper.createObjectNode());
-                    data.set("missions", demandsMissions.has("missions")
-                            ? demandsMissions.get("missions") : mapper.createObjectNode());
+                    data.set("demands", demands);
+                    data.set("missions", missions);
                     data.set("financials", financialsOut);
                     data.set("topProviders", asArray(topProviders));
                     data.set("popularCategories", asArray(popularCategories));
@@ -341,9 +387,9 @@ public class DashboardAggregatorController {
         return node;
     }
 
-    private ObjectNode metricPlaceholder() {
+    private ObjectNode metricValueLong(long value) {
         ObjectNode node = mapper.createObjectNode();
-        node.put("value", 0);
+        node.put("value", value);
         node.putNull("trend");
         return node;
     }
@@ -358,5 +404,61 @@ public class DashboardAggregatorController {
             trends.set(key, t);
         }
         return trends;
+    }
+
+    /**
+     * Trie un tableau JSON par un champ (texte ISO-8601 ou numérique) en ordre décroissant et
+     * tronque aux `limit` premiers éléments. Nécessaire car plusieurs endpoints downstream ne
+     * trient pas leurs résultats eux-mêmes (audit §5.3).
+     */
+    private ArrayNode sortDescAndTruncate(JsonNode arrayNode, String field, int limit) {
+        ArrayNode result = mapper.createArrayNode();
+        if (arrayNode == null || !arrayNode.isArray()) {
+            return result;
+        }
+        List<JsonNode> items = new ArrayList<>();
+        arrayNode.forEach(items::add);
+        items.sort(Comparator.comparing((JsonNode n) -> sortKey(n, field)).reversed());
+        items.stream().limit(limit).forEach(result::add);
+        return result;
+    }
+
+    private double sortKey(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        if (value.isNumber()) {
+            return value.asDouble();
+        }
+        try {
+            return Instant.parse(value.asText()).toEpochMilli();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Compte les éléments dont le champ date (ISO-8601) tombe dans le mois courant. */
+    private int countThisMonth(JsonNode arrayNode, String dateField) {
+        if (arrayNode == null || !arrayNode.isArray()) {
+            return 0;
+        }
+        YearMonth currentMonth = YearMonth.now();
+        int count = 0;
+        for (JsonNode item : arrayNode) {
+            try {
+                Instant instant = Instant.parse(item.path(dateField).asText());
+                if (YearMonth.from(instant.atZone(java.time.ZoneId.systemDefault())).equals(currentMonth)) {
+                    count++;
+                }
+            } catch (Exception ignored) {
+                // champ absent/invalide → ignoré
+            }
+        }
+        return count;
+    }
+
+    private ArrayNode mergeArrays(JsonNode a, JsonNode b) {
+        ArrayNode merged = mapper.createArrayNode();
+        if (a != null && a.isArray()) merged.addAll((ArrayNode) a);
+        if (b != null && b.isArray()) merged.addAll((ArrayNode) b);
+        return merged;
     }
 }
