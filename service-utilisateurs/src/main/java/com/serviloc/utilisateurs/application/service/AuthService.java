@@ -74,8 +74,7 @@ public class AuthService {
         );
         User saved = userRepository.save(user);
 
-        // OTP mock — code fixe 123456 en dev (S1)
-        String otpCode = "123456"; // dev — à remplacer par générateur aléatoire en prod
+        String otpCode = OtpGenerator.generate6Digits();
         otpRepository.deleteByUserId(saved.getId());
         OtpCode otp = OtpCode.create(saved.getId(), otpCode, 10);
         otpRepository.save(otp);
@@ -88,7 +87,7 @@ public class AuthService {
         return new RegisterResponse(
                 saved.getId().toString(),
                 saved.getEmail(),
-                "Compte créé. OTP de test : 123456"
+                "Compte créé. Un code de vérification a été envoyé."
         );
     }
 
@@ -125,12 +124,19 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException(
                         "Utilisateur introuvable : " + request.email()));
 
+        String otpCode = OtpGenerator.generate6Digits();
         otpRepository.deleteByUserId(user.getId());
-        OtpCode otp = OtpCode.create(user.getId(), "123456", 10);
+        OtpCode otp = OtpCode.create(user.getId(), otpCode, 10);
         otpRepository.save(otp);
 
+        // Fix : le renvoi d'OTP n'émettait auparavant aucun événement RabbitMQ,
+        // donc l'utilisateur ne recevait jamais le nouveau code. On réutilise
+        // user.registered (même structure de payload, déjà géré par Service Notifications).
+        eventPublisher.publishUserRegistered(
+                user.getId(), user.getEmail(), user.getRole().name(), otpCode);
+
         log.info("[AUTH] OTP renvoyé : userId={}", user.getId());
-        return new VerifyOtpResponse("OTP renvoyé. Code de test : 123456");
+        return new VerifyOtpResponse("Un nouveau code de vérification a été envoyé.");
     }
 
     // ─── Login ────────────────────────────────────────────────────
@@ -210,12 +216,16 @@ public class AuthService {
     public MessageResponse forgotPassword(ForgotPasswordRequest request) {
         userRepository.findByEmail(request.email()).ifPresent(user -> {
             otpRepository.deleteByUserIdAndPurpose(user.getId(), OtpCode.Purpose.PASSWORD_RESET);
+            String otpCode = OtpGenerator.generate6Digits();
             OtpCode otp = OtpCode.create(
-                    user.getId(), "123456", 10, OtpCode.Purpose.PASSWORD_RESET
+                    user.getId(), otpCode, 10, OtpCode.Purpose.PASSWORD_RESET
             );
             otpRepository.save(otp);
             log.info("[AUTH] Code reset password généré : userId={}", user.getId());
-            // TODO : event RabbitMQ pour Service Notifications (envoi email réel)
+            // NOTE : l'émission d'un événement dédié (ex. user.password_reset_requested)
+            // reste hors périmètre de cette session — non demandée, à traiter séparément.
+            // Le code aléatoire est désormais généré (cf. correctif OTP), mais sans event
+            // RabbitMQ il n'est pour l'instant pas transmis à l'utilisateur.
         });
 
         // Toujours 200, même si l'email n'existe pas (anti-énumération de comptes)

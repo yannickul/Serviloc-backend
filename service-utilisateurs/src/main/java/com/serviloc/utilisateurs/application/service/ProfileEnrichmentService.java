@@ -39,9 +39,14 @@ public class ProfileEnrichmentService {
             PaiementClient.ClientTransactionSummary summary =
                     paiementClient.getClientTransactionSummary(clientId.toString(), internalToken);
 
+            // NOTE : PaiementClient.PendingTransactionResponse ne transporte aucun libellé
+            // de mission (seulement demandId) — Service Paiement/Missions devrait exposer
+            // un vrai titre. En attendant cette évolution côté amont, on remplace l'ancien
+            // libellé figé ("Mission en cours" pour tous) par une référence différenciée,
+            // plus honnête qu'un texte identique pour toutes les missions.
             List<PendingPaymentInfo> pendingPayments = summary.pendingTransactions()
                     .stream()
-                    .map(t -> new PendingPaymentInfo(t.amount(), "Mission en cours"))
+                    .map(t -> new PendingPaymentInfo(t.amount(), missionLabelFrom(t.demandId())))
                     .toList();
 
             return new ClientEnrichment(
@@ -76,6 +81,12 @@ public class ProfileEnrichmentService {
             log.warn("[ENRICHMENT] Erreur enrichissement provider={} : {}", providerId, e.getMessage());
             return new ProviderEnrichment(0, 0.0);
         }
+    }
+
+    private String missionLabelFrom(String demandId) {
+        if (demandId == null || demandId.isBlank()) return "Mission";
+        String shortRef = demandId.length() > 8 ? demandId.substring(0, 8) : demandId;
+        return "Mission #" + shortRef;
     }
 
     // ─── DTOs internes ────────────────────────────────────────────

@@ -37,6 +37,26 @@ public class ProfileController {
         this.profileEnrichmentService = profileEnrichmentService;
     }
 
+    // ─── GET /user/{id} ────────────────────────────────────────────
+    // Endpoint public (authentification requise, tout rôle) — profil
+    // public d'un utilisateur, différencié selon son rôle réel.
+
+    @GetMapping("/user/{id}")
+    @Operation(summary = "Informations publiques d'un utilisateur")
+    public ResponseEntity<ApiResponse<?>> getPublicUser(@PathVariable java.util.UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable : " + id));
+
+        if (user.getRole() == UserRole.PROVIDER) {
+            Object body = providerProfileRepository.findByUserId(id)
+                    .map(profile -> UserResponseMapper.toPublicProviderProfile(user, profile))
+                    .orElseGet(() -> UserResponseMapper.toPublicProviderProfile(user));
+            return ResponseEntity.ok(ApiResponse.ok(body));
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(UserResponseMapper.toPublicClientProfile(user)));
+    }
+
     // ─── GET /client/me ───────────────────────────────────────────
 
     @GetMapping("/client/me")
@@ -52,6 +72,32 @@ public class ProfileController {
 
         return ResponseEntity.ok(ApiResponse.ok(
                 UserResponseMapper.toClientProfile(user, enrichment)));
+    }
+
+    // ─── PATCH /client/profile ─────────────────────────────────────
+
+    @PatchMapping("/client/profile")
+    @Operation(summary = "Mise à jour du profil client")
+    public ResponseEntity<ApiResponse<com.serviloc.utilisateurs.application.dto.ClientProfileDtos.ClientProfileUpdatedResponse>> updateClientProfile(
+            @AuthenticationPrincipal UserDetails principal,
+            @jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody
+            com.serviloc.utilisateurs.application.dto.ClientProfileDtos.UpdateClientProfileRequest request) {
+        User user = getUser(principal);
+        if (user.getRole() != UserRole.CLIENT)
+            throw new IllegalStateException("Accès réservé aux clients");
+
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setPhone(request.phone());
+        if (request.avatarUrl() != null && !request.avatarUrl().isBlank())
+            user.setAvatarUrl(request.avatarUrl());
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                new com.serviloc.utilisateurs.application.dto.ClientProfileDtos.ClientProfileUpdatedResponse(
+                        user.getId().toString(),
+                        "Profil mis à jour avec succès")));
     }
 
     // ─── GET /provider/me ─────────────────────────────────────────

@@ -99,11 +99,15 @@ public class UserEventPublisher {
                 "provisionalPassword", tempPassword
         ));
     }
-    // ─── provider.review_submitted ────────────────────────────────
+    // ─── provider.reviewed ─────────────────────────────────────────
+    // Fix : la routing key était "provider.review_submitted", absente du
+    // catalogue du contrat Notifications (qui attend "provider.reviewed").
+    // Le message était bien routé (wildcard provider.*) mais très probablement
+    // ignoré par le consumer faute de handler pour ce type exact.
 
     public void publishProviderReviewSubmitted(UUID agentId, UUID providerId,
                                                String verdict) {
-        publish("provider.review_submitted", Map.of(
+        publish("provider.reviewed", Map.of(
                 "agentId",    agentId.toString(),
                 "providerId", providerId.toString(),
                 "verdict",    verdict

@@ -108,6 +108,11 @@ public class InternalController {
         user.suspend();
         userRepository.save(user);
 
+        // Fix : ce endpoint injectait UserEventPublisher sans jamais l'appeler —
+        // un utilisateur suspendu par un agent (UC31-agent) ne recevait donc
+        // jamais de notification. Alignement sur le flux admin (AdminUserService).
+        eventPublisher.publishUserSuspended(id, user.getEmail());
+
         log.info("[INTERNAL] Suspension : userId={} litigeId={} by={}",
                 id, request.litigeId(), request.suspendedByRole());
 

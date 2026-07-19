@@ -77,6 +77,7 @@ public final class UserResponseMapper {
                 java.util.List.of(),
                 false,
                 java.util.List.of(),
+                null,        // agentReview
                 formatDate(user)
         );
     }
@@ -116,6 +117,50 @@ public final class UserResponseMapper {
                 profile.getCertifications(),
                 profile.isEstCertifie(),
                 documents,
+                null,        // agentReview — voir toAdminProviderProfile pour la version enrichie
+                formatDate(user)
+        );
+    }
+
+    // ─── AdminProviderProfile enrichi avec l'avis de l'agent instructeur ──
+
+    public static ProfileDtos.ProviderProfileResponse toAdminProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile,
+            ProfileDtos.AgentReview agentReview) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
+        return new ProfileDtos.ProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                profile.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getCompletedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                profile.getMonthlyEarnings(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                documents,
+                agentReview,
                 formatDate(user)
         );
     }
@@ -210,6 +255,59 @@ public final class UserResponseMapper {
                 profile.getCertifications(),
                 profile.isEstCertifie(),
                 documents,
+                null,        // agentReview — non pertinent pour la vue du prestataire lui-même
+                formatDate(user)
+        );
+    }
+
+    // ─── PublicProviderProfile (GET /user/{id}) ────────────────────
+
+    public static ProfileDtos.PublicProviderProfileResponse toPublicProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        return new ProfileDtos.PublicProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getCompletedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                formatDate(user)
+        );
+    }
+
+    public static ProfileDtos.PublicProviderProfileResponse toPublicProviderProfile(User user) {
+        return new ProfileDtos.PublicProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                null, 0.0, 0, false, 0.0, null,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                java.util.List.of(),
+                false,
                 formatDate(user)
         );
     }

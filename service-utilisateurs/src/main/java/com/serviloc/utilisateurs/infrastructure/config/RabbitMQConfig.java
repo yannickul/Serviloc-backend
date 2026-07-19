@@ -122,6 +122,12 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(notificationsQueue).to(servilocEventsExchange).with("provider.*");
     }
 
+    // Fix : ce binding manquait, donc agent.created (mot de passe provisoire) n'atteignait
+    // jamais notifications.queue — message silencieusement perdu, aucun binding ne matchait.
+    @Bean Binding bindNotificationsAgent(Queue notificationsQueue, TopicExchange servilocEventsExchange) {
+        return BindingBuilder.bind(notificationsQueue).to(servilocEventsExchange).with("agent.*");
+    }
+
     @Bean Binding bindNotificationsPayment(Queue notificationsQueue, TopicExchange servilocEventsExchange) {
         return BindingBuilder.bind(notificationsQueue).to(servilocEventsExchange).with("payment.*");
     }

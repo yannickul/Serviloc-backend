@@ -84,6 +84,15 @@ public final class ProfileDtos {
             String createdAt
     ) {}
 
+    // ─── AgentReview (enrichissement dossier prestataire, cf. divergence front) ───
+
+    public record AgentReview(
+            String agentName,
+            String verdict,
+            String comment,
+            String reviewedAt
+    ) {}
+
     // ─── ProviderProfileResponse ──────────────────────────────────
 
     public record ProviderProfileResponse(
@@ -108,6 +117,7 @@ public final class ProfileDtos {
             List<String> certifications,
             boolean estCertifie,
             List<ProviderDocument> documents,
+            AgentReview agentReview,
             String createdAt
     ) {}
 
@@ -142,6 +152,32 @@ public final class ProfileDtos {
             double hourlyRate,
             ServiceZone serviceZone,
             boolean isAvailable
+    ) {}
+
+    // ─── PublicProviderProfileResponse (GET /user/{id}) ────────────
+    // Même contenu que ProviderProfileResponse, sans les champs privés
+    // (monthlyEarnings, documents) qui n'ont pas à être exposés publiquement.
+
+    public record PublicProviderProfileResponse(
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String status,
+            String specialty,
+            double rating,
+            int completedMissions,
+            boolean isAvailable,
+            double hourlyRate,
+            ServiceZone serviceZone,
+            WeeklyAvailability availability,
+            List<String> certifications,
+            boolean estCertifie,
+            String createdAt
     ) {}
 
     public record PublicClientProfileResponse(

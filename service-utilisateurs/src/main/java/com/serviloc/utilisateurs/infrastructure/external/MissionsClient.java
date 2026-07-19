@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "service-missions", fallback = MissionsClientFallback.class)
+@FeignClient(name = "service-mission", fallback = MissionsClientFallback.class)
 public interface MissionsClient {
 
     @GetMapping("/internal/missions/stats/{userId}")
