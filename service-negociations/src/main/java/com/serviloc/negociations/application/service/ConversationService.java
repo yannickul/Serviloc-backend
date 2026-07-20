@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
@@ -35,6 +36,7 @@ public class ConversationService {
     private final QuoteRepository quoteRepository;
     private final NegociationEventPublisher eventPublisher;
     private final FichiersClient fichiersClient;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${internal.token}")
     private String internalToken;
@@ -43,12 +45,14 @@ public class ConversationService {
                                MessageRepository messageRepository,
                                QuoteRepository quoteRepository,
                                NegociationEventPublisher eventPublisher,
-                               FichiersClient fichiersClient) {
+                               FichiersClient fichiersClient,
+                               SimpMessagingTemplate messagingTemplate) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.quoteRepository = quoteRepository;
         this.eventPublisher = eventPublisher;
         this.fichiersClient = fichiersClient;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // ─── POST /client/conversations ───────────────────────────────
@@ -184,7 +188,13 @@ public class ConversationService {
         if (saved.getImageId() != null && !saved.getImageId().isBlank()) {
             imageUrl = fichiersClient.getUrl(saved.getImageId(), internalToken).data().url();
         }
-        return toMessageResponse(saved, imageUrl);
+        MessageResponse response = toMessageResponse(saved, imageUrl);
+
+        // Diffusion temps réel — /topic/conversation.{id} (relais RabbitMQ STOMP)
+        messagingTemplate.convertAndSend(
+                "/topic/conversation." + conversationId, response);
+
+        return response;
     }
 
     // ─── GET /internal/quotes/:quoteId ────────────────────────────
