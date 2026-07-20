@@ -1,9 +1,7 @@
-// infrastructure/external/adapter/NegociationClientAdapter.java
 package com.serviloc.mission.infrastructure.external.adapter;
 
 import com.serviloc.mission.application.port.out.QuotePort;
-import com.serviloc.mission.infrastructure.external.NegociationClient;
-import com.serviloc.mission.infrastructure.external.QuoteDto;
+import com.serviloc.mission.infrastructure.external.*;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,5 +16,15 @@ public class NegociationClientAdapter implements QuotePort {
     @Override
     public QuoteDto getQuoteById(String quoteId) {
         return negociationClient.getQuoteById(quoteId);
+    }
+
+    @Override
+    public QuoteDto createQuote(NegociationCreateQuoteRequest request) {
+        return negociationClient.createQuote(request);
+    }
+
+    @Override
+    public QuoteDto updateQuote(String quoteId, NegociationUpdateQuoteRequest request) {
+        return negociationClient.updateQuote(quoteId, request);
     }
 }

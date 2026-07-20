@@ -9,6 +9,7 @@ import java.util.List;
 public class MissionResponse {
 
     private String id;
+    private String title;
     private String demandId;
     private String quoteId;
     private String clientId;
@@ -54,4 +55,12 @@ public class MissionResponse {
     public void setLocation(LocationDto location) { this.location = location; }
     public List<StepResponse> getSteps() { return steps; }
     public void setSteps(List<StepResponse> steps) { this.steps = steps; }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 }

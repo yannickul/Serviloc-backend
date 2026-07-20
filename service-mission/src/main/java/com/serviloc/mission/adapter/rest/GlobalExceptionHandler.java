@@ -89,6 +89,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("ALREADY_EXISTS", ex.getMessage()));
     }
 
+    @ExceptionHandler(QuoteNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleQuoteNotFound(
+            QuoteNotFoundException ex) {
+        log.warn("Devis introuvable : {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("QUOTE_NOT_FOUND", ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         log.error("Erreur inattendue : {}", ex.getMessage(), ex);

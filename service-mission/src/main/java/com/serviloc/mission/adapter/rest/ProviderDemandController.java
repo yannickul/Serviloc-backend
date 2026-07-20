@@ -36,10 +36,11 @@ public class ProviderDemandController {
 
     @GetMapping("/missions")
     public ResponseEntity<ApiResponse<List<MissionResponse>>> getMyMissions(
-            @RequestHeader("X-User-Id") String providerId) {
+            @RequestHeader("X-User-Id") String providerId,
+            @RequestParam(required = false) String status) {
 
         return ResponseEntity.ok(
-                ApiResponse.success(missionUseCase.getMissionsByProvider(providerId)));
+                ApiResponse.success(missionUseCase.getMissionsByProvider(providerId, status)));
     }
 
     @GetMapping("/missions/{id}")
