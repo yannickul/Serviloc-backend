@@ -170,6 +170,15 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@roleKeyResolver}"
 
+        # ── WebSocket STOMP (chat temps réel) ──────────────────────
+        - id: negociations-ws
+          uri: lb://service-negociations
+          predicates:
+            - Path=/ws/**
+          filters:
+            - StripPrefix=0
+            - JwtAuthFilter
+
         # ── Service Litiges ───────────────────────────────────────
         - id: litiges-admin
           uri: lb://service-litiges

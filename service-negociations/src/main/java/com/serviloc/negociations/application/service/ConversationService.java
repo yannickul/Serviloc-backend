@@ -7,15 +7,19 @@ import com.serviloc.negociations.domain.model.Quote;
 import com.serviloc.negociations.domain.repository.ConversationRepository;
 import com.serviloc.negociations.domain.repository.MessageRepository;
 import com.serviloc.negociations.domain.repository.QuoteRepository;
+import com.serviloc.negociations.infrastructure.external.FichiersClient;
 import com.serviloc.negociations.infrastructure.messaging.NegociationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,15 +34,21 @@ public class ConversationService {
     private final MessageRepository messageRepository;
     private final QuoteRepository quoteRepository;
     private final NegociationEventPublisher eventPublisher;
+    private final FichiersClient fichiersClient;
+
+    @Value("${internal.token}")
+    private String internalToken;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
                                QuoteRepository quoteRepository,
-                               NegociationEventPublisher eventPublisher) {
+                               NegociationEventPublisher eventPublisher,
+                               FichiersClient fichiersClient) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.quoteRepository = quoteRepository;
         this.eventPublisher = eventPublisher;
+        this.fichiersClient = fichiersClient;
     }
 
     // ─── POST /client/conversations ───────────────────────────────
@@ -46,7 +56,9 @@ public class ConversationService {
     public ConversationResponse createConversation(UUID clientId,
                                                    CreateConversationRequest request) {
         UUID providerId = UUID.fromString(request.providerId());
-        UUID demandId   = UUID.fromString(request.demandId());
+        UUID demandId   = request.demandId() != null
+                ? UUID.fromString(request.demandId())
+                : null;
 
         // Idempotence — retourne la conversation existante si elle existe
         return conversationRepository
@@ -117,8 +129,22 @@ public class ConversationService {
         Page<Message> result = messageRepository
                 .findByConversationIdOrderBySentAtDesc(conversationId, pageable);
 
+        // Résolution des imageUrl en un seul appel batch (évite le N+1 vers service-fichiers)
+        List<String> imageIds = result.getContent().stream()
+                .map(Message::getImageId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        Map<String, String> urlsById = imageIds.isEmpty()
+                ? Map.of()
+                : fichiersClient.batchUrls(
+                        new FichiersClient.BatchUrlsRequest(imageIds), internalToken)
+                    .data().urls();
+
         return new MessageListResponse(
-                result.getContent().stream().map(this::toMessageResponse).toList(),
+                result.getContent().stream()
+                        .map(m -> toMessageResponse(m, urlsById.get(m.getImageId())))
+                        .toList(),
                 new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
         );
     }
@@ -153,7 +179,12 @@ public class ConversationService {
         );
 
         log.info("[NEGO] Message envoyé : convId={} senderRole={}", conversationId, senderRole);
-        return toMessageResponse(saved);
+
+        String imageUrl = null;
+        if (saved.getImageId() != null && !saved.getImageId().isBlank()) {
+            imageUrl = fichiersClient.getUrl(saved.getImageId(), internalToken).data().url();
+        }
+        return toMessageResponse(saved, imageUrl);
     }
 
     // ─── GET /internal/quotes/:quoteId ────────────────────────────
@@ -201,7 +232,7 @@ public class ConversationService {
 
         return new ConversationResponse(
                 c.getId().toString(),
-                c.getDemandId().toString(),
+                c.getDemandId() != null ? c.getDemandId().toString() : null,
                 clientSummary,
                 providerSummary,
                 c.getStatus().name().toLowerCase(),
@@ -212,7 +243,7 @@ public class ConversationService {
         );
     }
 
-    private MessageResponse toMessageResponse(Message m) {
+    private MessageResponse toMessageResponse(Message m, String imageUrl) {
         return new MessageResponse(
                 m.getId().toString(),
                 m.getConversationId().toString(),
@@ -220,21 +251,42 @@ public class ConversationService {
                 m.getSenderRole(),
                 m.getContent(),
                 m.getImageId(),
+                imageUrl,
                 m.isRead(),
                 m.getSentAt() != null ? m.getSentAt().format(FORMATTER) : null
         );
     }
 
     private QuoteResponse toQuoteResponse(Quote q) {
+        List<MaterialResponse> materials = q.getMaterials() != null
+                ? q.getMaterials().stream()
+                    .map(m -> new MaterialResponse(
+                            m.id().toString(), m.name(), m.quantity(),
+                            m.unitPrice(), m.subtotal()))
+                    .toList()
+                : List.of();
+        double materialsTotal = materials.stream().mapToDouble(MaterialResponse::subtotal).sum();
+
+        UUID clientId = conversationRepository.findById(q.getConversationId())
+                .map(Conversation::getClientId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Conversation introuvable : " + q.getConversationId()));
+
         return new QuoteResponse(
                 q.getId().toString(),
                 q.getDemandId().toString(),
                 q.getProviderId().toString(),
-                q.getAmount(),
+                clientId.toString(),
                 q.getDescription(),
+                q.getAmount(),
+                materials,
+                materialsTotal,
+                q.getAmount() + materialsTotal,
+                q.getEstimatedDurationHours(),
+                q.getValidityDays(),
                 q.getStatus().name().toLowerCase(),
-                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null,
-                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null
+                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null,
+                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null
         );
     }
 }

@@ -39,10 +39,9 @@ public class InternalNegociationController {
     @PostMapping("/quotes")
     @Operation(summary = "Créer un devis (depuis Service Missions)")
     public ResponseEntity<QuoteResponse> createQuote(
-            @RequestParam UUID conversationId,
             @Valid @RequestBody CreateQuoteRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(quoteService.createQuote(conversationId, request));
+                .body(quoteService.createQuote(request));
     }
 
     // ─── PUT /internal/quotes/:id ─────────────────────────────────

@@ -14,6 +14,7 @@ public class Quote {
     private String description;
     private List<Material> materials;
     private int estimatedDurationHours;
+    private int validityDays;
     private QuoteStatus status;
     private final LocalDateTime createdAt;
     private LocalDateTime expiresAt;
@@ -22,20 +23,23 @@ public class Quote {
     public static Quote create(UUID conversationId, UUID demandId,
                                UUID providerId, double amount,
                                String description, List<Material> materials,
-                               int estimatedDurationHours) {
+                               int estimatedDurationHours, int validityDays) {
         if (amount <= 0)
             throw new IllegalArgumentException("Montant du devis doit être positif");
+        if (validityDays <= 0)
+            throw new IllegalArgumentException("validityDays doit être >= 1");
+        LocalDateTime now = LocalDateTime.now();
         return new Quote(
                 UUID.randomUUID(), conversationId, demandId, providerId,
-                amount, description, materials, estimatedDurationHours,
-                QuoteStatus.EN_ATTENTE, LocalDateTime.now(),
-                LocalDateTime.now().plusHours(48), LocalDateTime.now()
+                amount, description, materials, estimatedDurationHours, validityDays,
+                QuoteStatus.EN_ATTENTE, now,
+                now.plusDays(validityDays), now
         );
     }
 
     private Quote(UUID id, UUID conversationId, UUID demandId, UUID providerId,
                   double amount, String description, List<Material> materials,
-                  int estimatedDurationHours, QuoteStatus status,
+                  int estimatedDurationHours, int validityDays, QuoteStatus status,
                   LocalDateTime createdAt, LocalDateTime expiresAt,
                   LocalDateTime updatedAt) {
         this.id = id;
@@ -46,6 +50,7 @@ public class Quote {
         this.description = description;
         this.materials = materials;
         this.estimatedDurationHours = estimatedDurationHours;
+        this.validityDays = validityDays;
         this.status = status;
         this.createdAt = createdAt;
         this.expiresAt = expiresAt;
@@ -53,6 +58,22 @@ public class Quote {
     }
 
     // ─── Business methods ─────────────────────────────────────────
+
+    /** Modifie le contenu du devis en conservant id/conversationId/providerId/status/createdAt. */
+    public void update(double amount, String description, List<Material> materials,
+                       int estimatedDurationHours, int validityDays) {
+        if (amount <= 0)
+            throw new IllegalArgumentException("Montant du devis doit être positif");
+        if (validityDays <= 0)
+            throw new IllegalArgumentException("validityDays doit être >= 1");
+        this.amount = amount;
+        this.description = description;
+        this.materials = materials;
+        this.estimatedDurationHours = estimatedDurationHours;
+        this.validityDays = validityDays;
+        this.expiresAt = LocalDateTime.now().plusDays(validityDays);
+        this.updatedAt = LocalDateTime.now();
+    }
 
     public void accept() {
         if (status != QuoteStatus.EN_ATTENTE)
@@ -89,6 +110,7 @@ public class Quote {
     public String getDescription()           { return description; }
     public List<Material> getMaterials()     { return materials; }
     public int getEstimatedDurationHours()   { return estimatedDurationHours; }
+    public int getValidityDays()             { return validityDays; }
     public QuoteStatus getStatus()           { return status; }
     public LocalDateTime getCreatedAt()      { return createdAt; }
     public LocalDateTime getExpiresAt()      { return expiresAt; }

@@ -30,7 +30,8 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
                 .orElse(new QuoteJpaEntity(
                         q.getId(), q.getConversationId(), q.getDemandId(),
                         q.getProviderId(), q.getAmount(), q.getDescription(),
-                        q.getEstimatedDurationHours(), q.getStatus(), q.getExpiresAt()
+                        q.getEstimatedDurationHours(), q.getValidityDays(),
+                        q.getStatus(), q.getExpiresAt()
                 ));
         entity.setStatus(q.getStatus());
         entity.setMaterialsJson(toJson(q.getMaterials()));
@@ -57,7 +58,7 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
         try {
             var ctor = Quote.class.getDeclaredConstructor(
                     UUID.class, UUID.class, UUID.class, UUID.class,
-                    double.class, String.class, List.class, int.class,
+                    double.class, String.class, List.class, int.class, int.class,
                     QuoteStatus.class, LocalDateTime.class,
                     LocalDateTime.class, LocalDateTime.class
             );
@@ -66,7 +67,8 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
                     e.getId(), e.getConversationId(), e.getDemandId(),
                     e.getProviderId(), e.getAmount(), e.getDescription(),
                     fromJson(e.getMaterialsJson()), e.getEstimatedDurationHours(),
-                    e.getStatus(), e.getCreatedAt(), e.getExpiresAt(), e.getUpdatedAt()
+                    e.getValidityDays(), e.getStatus(), e.getCreatedAt(),
+                    e.getExpiresAt(), e.getUpdatedAt()
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution Quote", ex);

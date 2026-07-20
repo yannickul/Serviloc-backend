@@ -39,9 +39,23 @@ public class QuoteService {
 
     // ─── POST /internal/quotes ────────────────────────────────────
 
-    public QuoteResponse createQuote(UUID conversationId, CreateQuoteRequest request) {
+    public QuoteResponse createQuote(CreateQuoteRequest request) {
         UUID demandId   = UUID.fromString(request.demandId());
         UUID providerId = UUID.fromString(request.providerId());
+
+        // Résolution de la conversation via demandId — responsabilité interne au service
+        var conversation = conversationRepository.findByDemandId(demandId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Conversation introuvable pour demandId : " + demandId));
+
+        // Garde : un seul devis actif (non refusé/expiré) par demande
+        quoteRepository.findByDemandId(demandId).ifPresent(existing -> {
+            if (existing.getStatus() == QuoteStatus.EN_ATTENTE
+                    || existing.getStatus() == QuoteStatus.ACCEPTE) {
+                throw new IllegalStateException(
+                        "Un devis actif existe déjà pour cette demande : " + demandId);
+            }
+        });
 
         List<Material> materials = request.materials() != null
                 ? request.materials().stream()
@@ -50,9 +64,10 @@ public class QuoteService {
                 : List.of();
 
         Quote quote = Quote.create(
-                conversationId, demandId, providerId,
+                conversation.getId(), demandId, providerId,
                 request.amount(), request.description(),
-                materials, request.estimatedDurationHours()
+                materials, request.estimatedDurationHours(),
+                request.validityDays()
         );
 
         Quote saved = quoteRepository.save(quote);
@@ -68,6 +83,11 @@ public class QuoteService {
         Quote quote = quoteRepository.findById(quoteId)
                 .orElseThrow(() -> new IllegalArgumentException("Devis introuvable : " + quoteId));
 
+        UUID requestingProviderId = UUID.fromString(request.requestingProviderId());
+        if (!quote.getProviderId().equals(requestingProviderId)) {
+            throw new IllegalStateException("Seul l'auteur du devis peut le modifier");
+        }
+
         if (quote.getStatus() != QuoteStatus.EN_ATTENTE) {
             throw new IllegalStateException("Seul un devis en attente peut être modifié");
         }
@@ -78,18 +98,18 @@ public class QuoteService {
                   .toList()
                 : quote.getMaterials();
 
-        // Recréer le devis avec les nouvelles valeurs
-        Quote updated = Quote.create(
-                quote.getConversationId(), quote.getDemandId(), quote.getProviderId(),
+        // Mutation in-place — conserve le même id (ne recrée pas d'entité)
+        quote.update(
                 request.amount() > 0 ? request.amount() : quote.getAmount(),
                 request.description() != null ? request.description() : quote.getDescription(),
                 materials,
                 request.estimatedDurationHours() > 0
                         ? request.estimatedDurationHours()
-                        : quote.getEstimatedDurationHours()
+                        : quote.getEstimatedDurationHours(),
+                request.validityDays() > 0 ? request.validityDays() : quote.getValidityDays()
         );
 
-        Quote saved = quoteRepository.save(updated);
+        Quote saved = quoteRepository.save(quote);
         log.info("[QUOTE] Devis mis à jour : id={}", quoteId);
         return toQuoteResponse(saved);
     }
@@ -169,15 +189,30 @@ public class QuoteService {
     }
 
     private QuoteResponse toQuoteResponse(Quote q) {
+        List<MaterialResponse> materials = q.getMaterials() != null
+                ? q.getMaterials().stream()
+                    .map(m -> new MaterialResponse(
+                            m.id().toString(), m.name(), m.quantity(),
+                            m.unitPrice(), m.subtotal()))
+                    .toList()
+                : List.of();
+        double materialsTotal = materials.stream().mapToDouble(MaterialResponse::subtotal).sum();
+
         return new QuoteResponse(
                 q.getId().toString(),
                 q.getDemandId().toString(),
                 q.getProviderId().toString(),
-                q.getAmount(),
+                getClientIdFromConversation(q.getConversationId()).toString(),
                 q.getDescription(),
+                q.getAmount(),
+                materials,
+                materialsTotal,
+                q.getAmount() + materialsTotal,
+                q.getEstimatedDurationHours(),
+                q.getValidityDays(),
                 q.getStatus().name().toLowerCase(),
-                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null,
-                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null
+                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null,
+                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null
         );
     }
 }

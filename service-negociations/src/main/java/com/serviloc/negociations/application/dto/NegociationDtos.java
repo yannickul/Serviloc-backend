@@ -13,7 +13,7 @@ public final class NegociationDtos {
 
     public record CreateConversationRequest(
             @NotNull String providerId,
-            @NotNull String demandId
+            String demandId   // optionnel — ex. conversation d'urgence sans demande liée
     ) {}
 
     public record SendMessageRequest(
@@ -56,6 +56,7 @@ public final class NegociationDtos {
             String senderRole,
             String content,
             String imageId,
+            String imageUrl,
             boolean read,
             String sentAt
     ) {}
@@ -83,11 +84,25 @@ public final class NegociationDtos {
             String id,
             String demandId,
             String providerId,
-            double amount,
-            String description,
+            String clientId,
+            String laborDescription,
+            double laborAmount,
+            List<MaterialResponse> materials,
+            double materialsTotal,
+            double totalAmount,
+            int estimatedDurationHours,
+            int validityDays,
             String status,
-            String expiresAt,
-            String createdAt
+            String createdAt,
+            String expiresAt
+    ) {}
+
+    public record MaterialResponse(
+            String id,
+            String name,
+            int quantity,
+            double unitPrice,
+            double subtotal
     ) {}
 
     public record ConversationInternalResponse(
@@ -107,7 +122,9 @@ public final class NegociationDtos {
             @Positive double amount,
             String description,
             List<MaterialRequest> materials,
-            int estimatedDurationHours
+            int estimatedDurationHours,
+            @jakarta.validation.constraints.Min(value = 1, message = "validityDays doit être >= 1")
+            int validityDays
     ) {}
 
     public record MaterialRequest(
@@ -123,9 +140,11 @@ public final class NegociationDtos {
     ) {}
 
     public record UpdateQuoteRequest(
+            @NotNull String requestingProviderId,
             @Positive double amount,
             String description,
             List<MaterialRequest> materials,
-            int estimatedDurationHours
+            int estimatedDurationHours,
+            int validityDays
     ) {}
 }
