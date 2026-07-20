@@ -14,4 +14,7 @@ public interface NegociationClient {
 
     @PutMapping("/internal/quotes/{id}")
     QuoteDto updateQuote(@PathVariable String id, @RequestBody NegociationUpdateQuoteRequest request);
+
+    @PatchMapping("/internal/quotes/{id}/status")
+    QuoteDto updateQuoteStatus(@PathVariable String id, @RequestBody NegociationUpdateQuoteStatusRequest request);
 }

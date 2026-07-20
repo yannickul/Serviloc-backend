@@ -27,4 +27,9 @@ public class NegociationClientAdapter implements QuotePort {
     public QuoteDto updateQuote(String quoteId, NegociationUpdateQuoteRequest request) {
         return negociationClient.updateQuote(quoteId, request);
     }
+
+    @Override
+    public QuoteDto updateQuoteStatus(String quoteId, NegociationUpdateQuoteStatusRequest request) {
+        return negociationClient.updateQuoteStatus(quoteId, request);
+    }
 }

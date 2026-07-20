@@ -164,19 +164,6 @@ public class DemandService implements DemandUseCase {
     }
 
     @Override
-    public void rejectQuote(String demandId, String clientId) {
-        Demand demand = demandRepository.findById(demandId)
-                .orElseThrow(() -> new DemandNotFoundException(demandId));
-
-        if (!demand.getClientId().equals(clientId)) {
-            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
-        }
-
-        demand.setQuoteId(null);
-        demandRepository.save(demand);
-    }
-
-    @Override
     public void acceptQuote(String demandId, String clientId, AcceptQuoteRequest request) {
         Demand demand = demandRepository.findById(demandId)
                 .orElseThrow(() -> new DemandNotFoundException(demandId));
@@ -185,16 +172,20 @@ public class DemandService implements DemandUseCase {
             throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
         }
 
-        if (demand.getQuoteId() != null) {
-            throw new IllegalStateException(
-                    "Un devis est déjà accepté pour la demande " + demandId);
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
         }
 
-        demand.setQuoteId(request.getQuoteId());
-        demandRepository.save(demand);
+        if (demand.getStatus() != DemandStatus.OUVERTE) {
+            throw new IllegalStateException(
+                    "Impossible d'accepter un devis pour une demande au statut " + demand.getStatus());
+        }
+
+        quotePort.updateQuoteStatus(demand.getQuoteId(),
+                new NegociationUpdateQuoteStatusRequest("accepte", request.getPaymentMethod(), request.getPhoneNumber()));
 
         eventPublisher.publishQuoteAccepted(new QuoteAcceptedEvent(
-                request.getQuoteId(),
+                demand.getQuoteId(),
                 demandId,
                 clientId,
                 demand.getProviderId(),
@@ -202,6 +193,28 @@ public class DemandService implements DemandUseCase {
                 request.getPhoneNumber()
         ));
     }
+
+    @Override
+    public void rejectQuote(String demandId, String clientId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (!demand.getClientId().equals(clientId)) {
+            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
+        }
+
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
+        }
+
+        quotePort.updateQuoteStatus(demand.getQuoteId(),
+                new NegociationUpdateQuoteStatusRequest("refuse", null, null));
+
+        demand.setQuoteId(null);
+        demandRepository.save(demand);
+    }
+
+
 
     private CategorySummary resolveCategory(String categoryId) {
         String cacheKey = "category:" + categoryId;

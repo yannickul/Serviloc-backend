@@ -30,4 +30,10 @@ public class NegociationClientFallback implements NegociationClient {
         log.error("NegociationClient indisponible — impossible de mettre à jour le devis {}", id);
         throw new IllegalStateException("Service Négociations indisponible — impossible de modifier le devis. Réessayez ultérieurement.");
     }
+
+    @Override
+    public QuoteDto updateQuoteStatus(String id, NegociationUpdateQuoteStatusRequest request) {
+        log.error("NegociationClient indisponible — impossible de changer le statut du devis {}", id);
+        throw new IllegalStateException("Service Négociations indisponible — impossible de traiter le devis. Réessayez ultérieurement.");
+    }
 }
