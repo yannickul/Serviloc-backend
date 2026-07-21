@@ -2,20 +2,19 @@
 package com.serviloc.mission.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.serviloc.mission.application.dto.request.BudgetRangeDto;
-import com.serviloc.mission.application.dto.request.CreateDemandRequest;
-import com.serviloc.mission.application.dto.request.LocationDto;
+import com.serviloc.mission.application.dto.request.*;
+import com.serviloc.mission.application.dto.request.CreateQuoteRequest;
+import com.serviloc.mission.application.port.out.QuotePort;
 import com.serviloc.mission.domain.event.QuoteAcceptedEvent;
-import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
 import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.port.in.DemandUseCase;
 import com.serviloc.mission.domain.event.DemandPublishedEvent;
 import com.serviloc.mission.domain.exception.DemandNotFoundException;
+import com.serviloc.mission.domain.exception.QuoteNotFoundException;
 import com.serviloc.mission.domain.exception.UnauthorizedMissionAccessException;
 import com.serviloc.mission.domain.model.*;
 import com.serviloc.mission.domain.repository.DemandRepository;
-import com.serviloc.mission.infrastructure.external.CategorieClient;
-import com.serviloc.mission.infrastructure.external.CategorySummary;
+import com.serviloc.mission.infrastructure.external.*;
 import com.serviloc.mission.infrastructure.messaging.MissionEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,18 +38,20 @@ public class DemandService implements DemandUseCase {
     private final CategorieClient categorieClient;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final QuotePort quotePort;
 
     public DemandService(
             DemandRepository demandRepository,
             MissionEventPublisher eventPublisher,
             CategorieClient categorieClient,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper, QuotePort quotePort) {
         this.demandRepository = demandRepository;
         this.eventPublisher = eventPublisher;
         this.categorieClient = categorieClient;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.quotePort = quotePort;
     }
 
     @Override
@@ -163,19 +164,6 @@ public class DemandService implements DemandUseCase {
     }
 
     @Override
-    public void rejectQuote(String demandId, String clientId) {
-        Demand demand = demandRepository.findById(demandId)
-                .orElseThrow(() -> new DemandNotFoundException(demandId));
-
-        if (!demand.getClientId().equals(clientId)) {
-            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
-        }
-
-        demand.setQuoteId(null);
-        demandRepository.save(demand);
-    }
-
-    @Override
     public void acceptQuote(String demandId, String clientId, AcceptQuoteRequest request) {
         Demand demand = demandRepository.findById(demandId)
                 .orElseThrow(() -> new DemandNotFoundException(demandId));
@@ -184,16 +172,20 @@ public class DemandService implements DemandUseCase {
             throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
         }
 
-        if (demand.getQuoteId() != null) {
-            throw new IllegalStateException(
-                    "Un devis est déjà accepté pour la demande " + demandId);
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
         }
 
-        demand.setQuoteId(request.getQuoteId());
-        demandRepository.save(demand);
+        if (demand.getStatus() != DemandStatus.OUVERTE) {
+            throw new IllegalStateException(
+                    "Impossible d'accepter un devis pour une demande au statut " + demand.getStatus());
+        }
+
+        quotePort.updateQuoteStatus(demand.getQuoteId(),
+                new NegociationUpdateQuoteStatusRequest("accepte", request.getPaymentMethod(), request.getPhoneNumber()));
 
         eventPublisher.publishQuoteAccepted(new QuoteAcceptedEvent(
-                request.getQuoteId(),
+                demand.getQuoteId(),
                 demandId,
                 clientId,
                 demand.getProviderId(),
@@ -201,6 +193,28 @@ public class DemandService implements DemandUseCase {
                 request.getPhoneNumber()
         ));
     }
+
+    @Override
+    public void rejectQuote(String demandId, String clientId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (!demand.getClientId().equals(clientId)) {
+            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
+        }
+
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
+        }
+
+        quotePort.updateQuoteStatus(demand.getQuoteId(),
+                new NegociationUpdateQuoteStatusRequest("refuse", null, null));
+
+        demand.setQuoteId(null);
+        demandRepository.save(demand);
+    }
+
+
 
     private CategorySummary resolveCategory(String categoryId) {
         String cacheKey = "category:" + categoryId;
@@ -226,6 +240,76 @@ public class DemandService implements DemandUseCase {
         return category;
     }
 
+    @Override
+    public QuoteResponse createQuoteForDemand(String demandId, String providerId, CreateQuoteRequest request) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (demand.getQuoteId() != null) {
+            throw new IllegalStateException("Un devis existe déjà pour la demande " + demandId);
+        }
+
+        NegociationCreateQuoteRequest negRequest = new NegociationCreateQuoteRequest(
+                demandId,
+                providerId,
+                request.getAmount(),
+                request.getDescription(),
+                mapMaterialInputs(request.getMaterials()),
+                request.getEstimatedDurationHours(),
+                request.getValidityDays());
+
+        QuoteDto quote = quotePort.createQuote(negRequest);
+
+        // Option A : quoteId peuplé dès la création, pas seulement à l'acceptation
+        demand.setQuoteId(quote.id());
+        demand.setProviderId(providerId);
+        demandRepository.save(demand);
+
+        return toQuoteResponse(quote);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public QuoteResponse getQuoteForDemand(String demandId) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
+        }
+
+        return toQuoteResponse(quotePort.getQuoteById(demand.getQuoteId()));
+    }
+
+    @Override
+    public QuoteResponse updateQuoteForDemand(String demandId, String providerId, UpdateQuoteRequest request) {
+        Demand demand = demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        if (demand.getQuoteId() == null) {
+            throw new QuoteNotFoundException(demandId);
+        }
+
+        NegociationUpdateQuoteRequest negRequest = new NegociationUpdateQuoteRequest(
+                providerId,
+                request.getAmount(),
+                request.getDescription(),
+                mapMaterialInputs(request.getMaterials()),
+                request.getEstimatedDurationHours(),
+                request.getValidityDays());
+
+        QuoteDto quote = quotePort.updateQuote(demand.getQuoteId(), negRequest);
+        return toQuoteResponse(quote);
+    }
+
+    private List<MaterialInputDto> mapMaterialInputs(List<QuoteMaterialInput> inputs) {
+        if (inputs == null) return null;
+        return inputs.stream()
+                .map(m -> new MaterialInputDto(m.getName(), m.getQuantity(), m.getUnitPrice()))
+                .collect(Collectors.toList());
+    }
+
+
     private DemandResponse toResponse(Demand demand) {
         DemandResponse response = new DemandResponse();
         response.setId(demand.getId());
@@ -243,7 +327,7 @@ public class DemandService implements DemandUseCase {
             response.setPhotos(photos);
         }
 
-        response.setStatus(demand.getStatus().name());
+        response.setStatus(demand.getStatus().name().toLowerCase());
         response.setIsUrgent(demand.isUrgent());
         response.setCreatedAt(demand.getCreatedAt());
         response.setUpdatedAt(demand.getUpdatedAt());
@@ -281,5 +365,28 @@ public class DemandService implements DemandUseCase {
                 demand.getDescription(),
                 category.getLabel(),
                 demand.getStatus().name().toLowerCase());
+    }
+
+    private QuoteResponse toQuoteResponse(QuoteDto quote) {
+        QuoteResponse response = new QuoteResponse();
+        response.setId(quote.id());
+        response.setDemandId(quote.demandId());
+        response.setProviderId(quote.providerId());
+        response.setClientId(quote.clientId());
+        response.setLaborDescription(quote.laborDescription());
+        response.setLaborAmount(quote.laborAmount());
+        if (quote.materials() != null) {
+            response.setMaterials(quote.materials().stream()
+                    .map(m -> new QuoteResponse.MaterialResponse(m.id(), m.name(), m.quantity(), m.unitPrice(), m.subtotal()))
+                    .collect(Collectors.toList()));
+        }
+        response.setMaterialsTotal(quote.materialsTotal());
+        response.setTotalAmount(quote.totalAmount());
+        response.setEstimatedDurationHours(quote.estimatedDurationHours());
+        response.setValidityDays(quote.validityDays());
+        response.setStatus(quote.status());
+        response.setCreatedAt(quote.createdAt());
+        response.setExpiresAt(quote.expiresAt());
+        return response;
     }
 }

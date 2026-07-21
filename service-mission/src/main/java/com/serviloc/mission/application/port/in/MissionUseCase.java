@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface MissionUseCase {
     MissionResponse getMissionById(String id, String userId, String role);
-    List<MissionResponse> getMissionsByProvider(String providerId);
+    List<MissionResponse> getMissionsByProvider(String providerId, String status);
     List<MissionResponse> getMissionsByClient(String clientId);
     StartMissionResponse startMission(String missionId, String providerId);
     CompleteMissionResponse completeMission(String missionId, String providerId);

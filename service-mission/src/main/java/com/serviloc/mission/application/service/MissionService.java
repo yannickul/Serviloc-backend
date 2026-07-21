@@ -10,6 +10,7 @@ import com.serviloc.mission.application.port.in.MissionUseCase;
 import com.serviloc.mission.domain.event.*;
 import com.serviloc.mission.domain.exception.*;
 import com.serviloc.mission.domain.model.*;
+import com.serviloc.mission.domain.repository.DemandRepository;
 import com.serviloc.mission.domain.repository.EvaluationRepository;
 import com.serviloc.mission.domain.repository.MissionRepository;
 import com.serviloc.mission.infrastructure.external.UpdateRatingRequest;
@@ -46,6 +47,7 @@ public class MissionService implements MissionUseCase {
     private final MissionValidationJpaRepository validationRepository;
     private final MissionStepJpaRepository stepRepository;
     private final MissionJpaRepository missionJpaRepository;
+    private final DemandRepository demandRepository;
 
     public MissionService(
             MissionRepository missionRepository,
@@ -55,7 +57,7 @@ public class MissionService implements MissionUseCase {
             PaymentPort paymentPort,
             MissionValidationJpaRepository validationRepository,
             MissionStepJpaRepository stepRepository,
-            MissionJpaRepository missionJpaRepository) {
+            MissionJpaRepository missionJpaRepository, DemandRepository demandRepository) {
         this.missionRepository = missionRepository;
         this.evaluationRepository = evaluationRepository;
         this.eventPublisher = eventPublisher;
@@ -64,6 +66,7 @@ public class MissionService implements MissionUseCase {
         this.validationRepository = validationRepository;
         this.stepRepository = stepRepository;
         this.missionJpaRepository = missionJpaRepository;
+        this.demandRepository = demandRepository;
     }
 
     @Override
@@ -84,9 +87,13 @@ public class MissionService implements MissionUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MissionResponse> getMissionsByProvider(String providerId) {
-        return missionRepository.findByProviderId(providerId)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+    public List<MissionResponse> getMissionsByProvider(String providerId, String status) {
+        List<Mission> missions = missionRepository.findByProviderId(providerId);
+        MissionStatus filterStatus = status != null ? MissionStatus.valueOf(status.toUpperCase()) : null;
+        return missions.stream()
+                .filter(m -> filterStatus == null || m.getStatus() == filterStatus)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -455,7 +462,7 @@ public class MissionService implements MissionUseCase {
         response.setClientId(mission.getClientId());
         response.setProviderId(mission.getProviderId());
         response.setCategory(mission.getCategory());
-        response.setStatus(mission.getStatus().name());
+        response.setStatus(mission.getStatus().name().toLowerCase());
         response.setTotalAmount(mission.getTotalAmount());
         response.setSequesteredAmount(mission.getSequesteredAmount());
         response.setPaymentStatus(mission.getPaymentStatus());

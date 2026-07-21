@@ -1,4 +1,3 @@
-// adapter/rest/ClientDemandController.java
 package com.serviloc.mission.adapter.rest;
 
 import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
@@ -6,6 +5,7 @@ import com.serviloc.mission.application.dto.request.CreateDemandRequest;
 import com.serviloc.mission.application.dto.response.ApiResponse;
 import com.serviloc.mission.application.dto.response.DemandResponse;
 import com.serviloc.mission.application.dto.response.PagedResponse;
+import com.serviloc.mission.application.dto.response.QuoteResponse;
 import com.serviloc.mission.application.port.in.DemandUseCase;
 import com.serviloc.mission.domain.model.DemandStatus;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -61,6 +61,13 @@ public class ClientDemandController {
                 ApiResponse.success(demandUseCase.getDemandById(id, clientId)));
     }
 
+    @GetMapping("/demands/{id}/quote")
+    public ResponseEntity<ApiResponse<QuoteResponse>> getQuote(
+            @PathVariable String id) {
+
+        return ResponseEntity.ok(ApiResponse.success(demandUseCase.getQuoteForDemand(id)));
+    }
+
     @DeleteMapping("/demands/{id}")
     public ResponseEntity<ApiResponse<Void>> cancelDemand(
             @PathVariable String id,
@@ -89,23 +96,3 @@ public class ClientDemandController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

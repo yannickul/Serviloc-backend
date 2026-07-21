@@ -63,6 +63,10 @@ public class DemandJpaEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "quote_acceptance_pending", nullable = false)
+    private boolean quoteAcceptancePending = false;
+
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) createdAt = Instant.now();
@@ -108,4 +112,7 @@ public class DemandJpaEntity {
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public boolean isQuoteAcceptancePending() { return quoteAcceptancePending; }
+    public void setQuoteAcceptancePending(boolean quoteAcceptancePending) { this.quoteAcceptancePending = quoteAcceptancePending; }
+
 }
