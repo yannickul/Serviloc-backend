@@ -1,5 +1,6 @@
 package com.serviloc.negociations.adapter.rest;
 
+import com.serviloc.negociations.domain.exception.QuoteNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,6 +13,11 @@ public class GlobalExceptionHandler {
 
     record ErrorDetail(String code, String message, String field) {}
     record ErrorResponse(boolean success, ErrorDetail error) {}
+
+    @ExceptionHandler(QuoteNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleQuoteNotFound(QuoteNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, "QUOTE_NOT_FOUND", ex.getMessage(), null);
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArg(IllegalArgumentException ex) {

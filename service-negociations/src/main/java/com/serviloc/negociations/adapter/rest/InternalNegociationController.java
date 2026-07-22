@@ -26,6 +26,20 @@ public class InternalNegociationController {
         this.quoteService = quoteService;
     }
 
+    // ─── GET /internal/quotes?demandId=xxx[&providerId=yyy] ───────
+
+    @GetMapping("/quotes")
+    @Operation(summary = "Liste les devis d'une demande, ou le devis d'un prestataire précis " +
+                          "si providerId est fourni")
+    public ResponseEntity<?> getQuotesByDemand(
+            @RequestParam UUID demandId,
+            @RequestParam(required = false) UUID providerId) {
+        if (providerId != null) {
+            return ResponseEntity.ok(quoteService.getQuoteByDemandAndProvider(demandId, providerId));
+        }
+        return ResponseEntity.ok(quoteService.getQuotesByDemand(demandId));
+    }
+
     // ─── GET /internal/quotes/:quoteId ────────────────────────────
 
     @GetMapping("/quotes/{quoteId}")

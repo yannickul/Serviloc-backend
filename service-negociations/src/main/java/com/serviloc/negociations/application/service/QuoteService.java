@@ -1,6 +1,7 @@
 package com.serviloc.negociations.application.service;
 
 import com.serviloc.negociations.application.dto.NegociationDtos.*;
+import com.serviloc.negociations.domain.exception.QuoteNotFoundException;
 import com.serviloc.negociations.domain.model.Material;
 import com.serviloc.negociations.domain.model.Quote;
 import com.serviloc.negociations.domain.model.QuoteStatus;
@@ -43,17 +44,21 @@ public class QuoteService {
         UUID demandId   = UUID.fromString(request.demandId());
         UUID providerId = UUID.fromString(request.providerId());
 
-        // Résolution de la conversation via demandId — responsabilité interne au service
-        var conversation = conversationRepository.findByDemandId(demandId)
+        // Résolution de la conversation via (demandId, providerId) — plusieurs prestataires
+        // peuvent chacun avoir leur propre conversation/devis sur la même demande
+        var conversation = conversationRepository.findByDemandIdAndProviderId(demandId, providerId)
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Conversation introuvable pour demandId : " + demandId));
+                        "Conversation introuvable pour demandId=" + demandId
+                        + " providerId=" + providerId));
 
-        // Garde : un seul devis actif (non refusé/expiré) par demande
-        quoteRepository.findByDemandId(demandId).ifPresent(existing -> {
+        // Garde : un seul devis actif (non refusé/expiré) par (demande, prestataire) —
+        // pas par demande seule, puisque plusieurs prestataires concurrents sont autorisés
+        quoteRepository.findByDemandIdAndProviderId(demandId, providerId).ifPresent(existing -> {
             if (existing.getStatus() == QuoteStatus.EN_ATTENTE
                     || existing.getStatus() == QuoteStatus.ACCEPTE) {
                 throw new IllegalStateException(
-                        "Un devis actif existe déjà pour cette demande : " + demandId);
+                        "Un devis actif existe déjà pour ce prestataire sur cette demande : "
+                        + demandId);
             }
         });
 
@@ -134,6 +139,23 @@ public class QuoteService {
                         request.phoneNumber() != null ? request.phoneNumber() : ""
                 );
                 log.info("[QUOTE] Devis accepté → Saga 1 déclenchée : quoteId={}", quoteId);
+
+                // Rejet automatique des devis concurrents en attente sur la même demande
+                // (plusieurs prestataires peuvent avoir soumis un devis — un seul peut être accepté)
+                List<Quote> concurrents = quoteRepository.findAllByDemandId(quote.getDemandId())
+                        .stream()
+                        .filter(q -> !q.getId().equals(quote.getId()))
+                        .filter(q -> q.getStatus() == QuoteStatus.EN_ATTENTE)
+                        .toList();
+
+                concurrents.forEach(concurrent -> {
+                    concurrent.refuse();
+                    quoteRepository.save(concurrent);
+                    eventPublisher.publishQuoteRefused(
+                            concurrent.getId(), concurrent.getDemandId(), concurrent.getProviderId());
+                    log.info("[QUOTE] Devis concurrent auto-refusé suite acceptation : " +
+                            "quoteId={} demandId={}", concurrent.getId(), concurrent.getDemandId());
+                });
             }
             case "refuse" -> {
                 quote.refuse();
@@ -149,17 +171,34 @@ public class QuoteService {
         return toQuoteResponse(quote);
     }
 
+    // ─── GET /internal/quotes?demandId=xxx[&providerId=yyy] ──────
+
+    public List<QuoteResponse> getQuotesByDemand(UUID demandId) {
+        return quoteRepository.findAllByDemandId(demandId).stream()
+                .map(this::toQuoteResponse)
+                .toList();
+    }
+
+    public QuoteResponse getQuoteByDemandAndProvider(UUID demandId, UUID providerId) {
+        Quote quote = quoteRepository.findByDemandIdAndProviderId(demandId, providerId)
+                .orElseThrow(() -> new QuoteNotFoundException(
+                        "Aucun devis pour providerId=" + providerId
+                        + " sur demandId=" + demandId));
+        return toQuoteResponse(quote);
+    }
+
     // ─── Consumer payment.failed → reset devis en EN_ATTENTE ─────
 
     public void resetQuoteOnPaymentFailed(UUID demandId) {
-        quoteRepository.findByDemandId(demandId).ifPresent(quote -> {
-            if (quote.getStatus() == QuoteStatus.ACCEPTE) {
-                quote.resetToWaiting();
-                quoteRepository.save(quote);
-                log.info("[QUOTE] Devis remis en attente suite payment.failed : demandId={}",
-                        demandId);
-            }
-        });
+        quoteRepository.findAllByDemandId(demandId).stream()
+                .filter(q -> q.getStatus() == QuoteStatus.ACCEPTE)
+                .findFirst()
+                .ifPresent(quote -> {
+                    quote.resetToWaiting();
+                    quoteRepository.save(quote);
+                    log.info("[QUOTE] Devis remis en attente suite payment.failed : " +
+                            "quoteId={} demandId={}", quote.getId(), demandId);
+                });
     }
 
     // ─── @Scheduled — expiration des devis ───────────────────────

@@ -15,4 +15,5 @@ public interface ConversationRepository {
     Page<Conversation> findByClientIdOrderByLastMessageAtDesc(UUID clientId, Pageable pageable);
     Page<Conversation> findByProviderIdOrderByLastMessageAtDesc(UUID providerId, Pageable pageable);
     Optional<Conversation> findByDemandId(UUID demandId);
+    Optional<Conversation> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
 }

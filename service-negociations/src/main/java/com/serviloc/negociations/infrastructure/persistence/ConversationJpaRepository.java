@@ -22,4 +22,6 @@ public interface ConversationJpaRepository
             UUID providerId, Pageable pageable);
 
     Optional<ConversationJpaEntity> findByDemandId(UUID demandId);
+
+    Optional<ConversationJpaEntity> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
 }

@@ -49,6 +49,16 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
     }
 
     @Override
+    public Optional<Quote> findByDemandIdAndProviderId(UUID demandId, UUID providerId) {
+        return jpa.findByDemandIdAndProviderId(demandId, providerId).map(this::toDomain);
+    }
+
+    @Override
+    public List<Quote> findAllByDemandId(UUID demandId) {
+        return jpa.findAllByDemandId(demandId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Quote> findExpiredPending() {
         return jpa.findExpiredByStatus(QuoteStatus.EN_ATTENTE, LocalDateTime.now())
                 .stream().map(this::toDomain).toList();
