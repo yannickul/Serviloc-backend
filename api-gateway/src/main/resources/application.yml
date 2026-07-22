@@ -380,6 +380,7 @@ eureka:
     register-with-eureka: true
   instance:
     prefer-ip-address: true
+    ip-address: 127.0.0.1
 
 jwt:
   secret: ${JWT_SECRET}

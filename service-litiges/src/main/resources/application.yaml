@@ -33,6 +33,7 @@ eureka:
       defaultZone: http://${EUREKA_HOSTNAME}:8761/eureka/
   instance:
     prefer-ip-address: true
+    ip-address: 127.0.0.1
 
 feign:
   circuitbreaker:

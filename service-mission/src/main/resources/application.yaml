@@ -55,9 +55,7 @@ eureka:
     register-with-eureka: true
   instance:
     prefer-ip-address: true
-    instance-id: ${spring.application.name}:${server.port}
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
+    ip-address: 127.0.0.1
 
 feign:
   client:
