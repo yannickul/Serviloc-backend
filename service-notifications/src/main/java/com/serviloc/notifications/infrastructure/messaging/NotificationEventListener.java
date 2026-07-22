@@ -47,7 +47,7 @@ public class NotificationEventListener {
 
     @RabbitListener(queues = "${serviloc.messaging.queue}")
     public void onEvent(Message message,
-                         @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
+                        @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
 
         Map<String, Object> rawEvent;
@@ -74,12 +74,13 @@ public class NotificationEventListener {
             case "user.suspended"                 -> onUserSuspended(payload);
             case "demand.published"               -> onDemandPublished(payload);
             case "negotiation.conversation_opened"-> onNegotiationConversationOpened(payload);
-            case "negotiation.quote_accepted"     -> onNegotiationQuoteAccepted(payload);
+            case "negotiation.quote.accepted"     -> onNegotiationQuoteAccepted(payload);
             case "negotiation.message_sent"       -> onNegotiationMessageSent(payload);
             case "negotiation.quote_refused"      -> onNegotiationQuoteRefused(payload);
             case "payment.confirmed"              -> onPaymentConfirmed(payload);
             case "payment.failed"                 -> onPaymentFailed(payload);
             case "payment.released"               -> onPaymentReleased(payload);
+            case "payment.refunded"               -> onPaymentRefunded(payload);
             case "litige.opened"                  -> onLitigeOpened(payload);
             case "litige.assigned"                -> onLitigeAssigned(payload);
             case "litige.resolved"                -> onLitigeResolved(payload);
@@ -101,15 +102,15 @@ public class NotificationEventListener {
             dispatch.sendEmail(userId, "user.registered", email,
                     "Votre code de confirmation ServiLoc",
                     "Bienvenue sur ServiLoc !\n\nVotre code de confirmation est :\n\n"
-                    + "    <strong style='font-size:32px;letter-spacing:8px'>" + otpCode + "</strong>\n\n"
-                    + "Ce code expire dans 5 minutes. Ne le communiquez à personne.");
+                            + "    <strong style='font-size:32px;letter-spacing:8px'>" + otpCode + "</strong>\n\n"
+                            + "Ce code expire dans 5 minutes. Ne le communiquez à personne.");
         } else {
             log.warn("[user.registered] Champ 'otpCode' absent du payload userId={} — "
                     + "email de bienvenue envoyé sans code", userId);
             dispatch.sendEmail(userId, "user.registered", email,
                     "Bienvenue sur ServiLoc",
                     "Votre inscription a bien été prise en compte.\n"
-                    + "Connectez-vous dès maintenant sur ServiLoc.");
+                            + "Connectez-vous dès maintenant sur ServiLoc.");
         }
     }
 
@@ -121,7 +122,7 @@ public class NotificationEventListener {
         dispatch.sendEmail(providerId, "provider.validated", email,
                 "Votre dossier prestataire a été validé ✓",
                 "Félicitations !\n\nVotre dossier prestataire ServiLoc a été validé. "
-                + "Vous pouvez désormais recevoir des demandes de clients.");
+                        + "Vous pouvez désormais recevoir des demandes de clients.");
         dispatch.sendPush(providerId, "provider.validated", "Dossier validé ✓",
                 "Votre dossier prestataire a été validé.", Map.of());
     }
@@ -135,8 +136,8 @@ public class NotificationEventListener {
         dispatch.sendEmail(providerId, "provider.rejected", email,
                 "Votre dossier prestataire a été refusé",
                 "Votre dossier prestataire ServiLoc n'a pas été retenu.\n\n"
-                + "Motif : " + reason + "\n\n"
-                + "Vous pouvez soumettre un nouveau dossier après correction.");
+                        + "Motif : " + reason + "\n\n"
+                        + "Vous pouvez soumettre un nouveau dossier après correction.");
         dispatch.sendPush(providerId, "provider.rejected", "Dossier refusé",
                 "Motif : " + reason, Map.of());
     }
@@ -164,14 +165,14 @@ public class NotificationEventListener {
             dispatch.sendEmail(agentId, "agent.created", email,
                     "Vos identifiants agent ServiLoc",
                     "Bienvenue dans l'équipe ServiLoc !\n\n"
-                    + "Votre mot de passe provisoire : <strong>" + provisionalPassword + "</strong>\n\n"
-                    + "Connectez-vous et changez-le immédiatement.");
+                            + "Votre mot de passe provisoire : <strong>" + provisionalPassword + "</strong>\n\n"
+                            + "Connectez-vous et changez-le immédiatement.");
         } else {
             log.warn("[agent.created] Champ 'provisionalPassword' absent du payload agentId={}", agentId);
             dispatch.sendEmail(agentId, "agent.created", email,
                     "Votre compte agent ServiLoc a été créé",
                     "Bienvenue dans l'équipe ServiLoc !\n\n"
-                    + "Utilisez la fonction 'mot de passe oublié' pour définir votre mot de passe.");
+                            + "Utilisez la fonction 'mot de passe oublié' pour définir votre mot de passe.");
         }
     }
 
@@ -185,7 +186,7 @@ public class NotificationEventListener {
         dispatch.sendEmail(userId, "user.suspended", email,
                 "Votre compte ServiLoc a été suspendu",
                 "Votre compte ServiLoc a été suspendu" + duration + ".\n\n"
-                + "Pour toute contestation, contactez notre support.");
+                        + "Pour toute contestation, contactez notre support.");
     }
 
     // 7. demand.published → Push prestataires zone
@@ -282,6 +283,19 @@ public class NotificationEventListener {
 
         dispatch.sendPush(providerId, "payment.released",
                 "Paiement libéré", "Paiement libéré : " + formatted + " XAF", Map.of());
+    }
+
+    // 14b. payment.refunded → Push client "Remboursement effectué"
+    private void onPaymentRefunded(Map<String, Object> payload) {
+        String clientId       = getString(payload, "clientId");
+        String transactionId  = getString(payload, "transactionId");
+        long amount           = getLong(payload, "amount");
+        String formatted      = XAF_FORMAT.format(amount);
+
+        dispatch.sendPush(clientId, "payment.refunded",
+                "Remboursement effectué",
+                "Vous avez été remboursé de " + formatted + " XAF.",
+                Map.of("transactionId", String.valueOf(transactionId)));
     }
 
     // 15. litige.opened → Push admin
