@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -85,6 +84,20 @@ public class InternalPaymentController {
         return ResponseEntity.ok(paymentService.getFinancialStats(fromDate, toDate));
     }
 
+    // ─── GET /internal/stats/admin-full ────────────────────────────
+    // Recommandé par le Gateway pour éviter l'agrégation côté Gateway :
+    // renvoie directement {commissions, payments} déjà résolus (noms inclus).
+
+    @GetMapping("/stats/admin-full")
+    @Operation(summary = "Statistiques admin complètes (commissions + paiements, noms résolus)")
+    public ResponseEntity<PaymentService.AdminStats> getAdminFullStats(
+            @RequestParam(defaultValue = "2026-01-01T00:00:00") String from,
+            @RequestParam(defaultValue = "2099-12-31T23:59:59") String to) {
+        LocalDateTime fromDate = LocalDateTime.parse(from, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        LocalDateTime toDate   = LocalDateTime.parse(to,   DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        return ResponseEntity.ok(paymentService.getAdminStats(fromDate, toDate));
+    }
+
     @GetMapping("/transactions/client/{clientId}/pending")
     @Operation(summary = "Transactions en séquestre + totalSpent d'un client")
     public ResponseEntity<ClientTransactionSummary> getClientTransactionSummary(
@@ -119,7 +132,9 @@ public class InternalPaymentController {
 
     public record TransactionResponse(
             String id,
+            String reference,
             String demandId,
+            String missionId,
             String clientId,
             String providerId,
             double amount,
@@ -134,7 +149,9 @@ public class InternalPaymentController {
     private TransactionResponse toResponse(Transaction t) {
         return new TransactionResponse(
                 t.getId().toString(),
+                t.getReference(),
                 t.getDemandId().toString(),
+                t.getMissionId() != null ? t.getMissionId().toString() : null,
                 t.getClientId().toString(),
                 t.getProviderId().toString(),
                 t.getAmount(),

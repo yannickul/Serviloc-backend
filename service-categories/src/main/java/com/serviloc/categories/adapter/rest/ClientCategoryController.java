@@ -1,7 +1,7 @@
 package com.serviloc.categories.adapter.rest;
 
 import com.serviloc.categories.adapter.rest.dto.ApiResponse;
-import com.serviloc.categories.application.dto.CategoryResponse;
+import com.serviloc.categories.application.dto.ClientCategoryResponse;
 import com.serviloc.categories.application.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -31,7 +31,7 @@ public class ClientCategoryController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Liste des catégories")
     })
     @GetMapping("/client/categories")
-    public ApiResponse<List<CategoryResponse>> getClientCategories() {
+    public ApiResponse<List<ClientCategoryResponse>> getClientCategories() {
         return ApiResponse.of(categoryService.listForClient());
     }
 }

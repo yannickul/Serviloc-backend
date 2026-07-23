@@ -5,7 +5,6 @@ import com.serviloc.paiement.application.service.PaymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -33,17 +32,27 @@ public class PaymentEventConsumer {
             Map<String, Object> event = objectMapper.readValue(
                     rawMessage, new com.fasterxml.jackson.core.type.TypeReference<>() {});
 
-            String eventType = (String) event.get("eventType");
-            log.info("[CONSUMER] eventType={}", eventType);
+            if (event.containsKey("eventType")) {
+                // Format enveloppe standard : { eventId, eventType, occurredAt, payload }
+                String eventType = (String) event.get("eventType");
+                log.info("[CONSUMER] eventType={}", eventType);
 
-            if ("negotiation.quote.accepted".equals(eventType)) {
                 Map<String, Object> payload = (Map<String, Object>) event.get("payload");
-                handleQuoteAccepted(payload);
-            } else if ("mission.completed".equals(eventType)) {
-                Map<String, Object> payload = (Map<String, Object>) event.get("payload");
-                handleMissionCompleted(payload);
+
+                if ("negotiation.quote.accepted".equals(eventType)) {
+                    handleQuoteAccepted(payload);
+                } else if ("mission.completed".equals(eventType)) {
+                    handleMissionCompleted(payload);
+                } else {
+                    log.warn("[CONSUMER] Event ignoré : eventType={}", eventType);
+                }
+            } else if (event.containsKey("transactionId") && event.containsKey("missionId")) {
+                // Compat : service-mission publie MissionCompletedEvent brut, sans enveloppe.
+                // TODO : à retirer une fois service-mission enveloppé (eventId/eventType/payload).
+                log.info("[CONSUMER] Event brut détecté (sans enveloppe), traité comme mission.completed");
+                handleMissionCompleted(event);
             } else {
-                log.warn("[CONSUMER] Event ignoré : eventType={}", eventType);
+                log.warn("[CONSUMER] Event ignoré : format non reconnu, clés={}", event.keySet());
             }
 
         } catch (Exception e) {
@@ -68,7 +77,10 @@ public class PaymentEventConsumer {
 
     private void handleMissionCompleted(Map<String, Object> payload) {
         UUID transactionId = UUID.fromString((String) payload.get("transactionId"));
-        log.info("[PAYMENT] Traitement mission.completed : transactionId={}", transactionId);
-        paymentService.releaseFunds(transactionId);
+        Object missionIdRaw = payload.get("missionId");
+        String missionId = missionIdRaw != null ? missionIdRaw.toString() : null;
+        log.info("[PAYMENT] Traitement mission.completed : transactionId={} missionId={}",
+                transactionId, missionId);
+        paymentService.releaseFunds(transactionId, missionId);
     }
 }

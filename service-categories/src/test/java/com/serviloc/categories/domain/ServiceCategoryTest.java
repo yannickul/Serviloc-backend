@@ -1,5 +1,6 @@
 package com.serviloc.categories.domain;
 
+import com.serviloc.categories.domain.model.BudgetRange;
 import com.serviloc.categories.domain.model.CategoryId;
 import com.serviloc.categories.domain.model.IconKey;
 import com.serviloc.categories.domain.model.ServiceCategory;
@@ -10,29 +11,50 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ServiceCategoryTest {
 
+    private static final BudgetRange DEFAULT_BUDGET = new BudgetRange(5000, 50000);
+    private static final String DEFAULT_DESCRIPTION = "Description de test suffisamment longue";
+
     @Test
     void shouldCreateCategoryWithGeneratedSlugId() {
-        ServiceCategory category = ServiceCategory.create("Plomberie", IconKey.WRENCH, "#dbeafe");
+        ServiceCategory category = ServiceCategory.create(
+                "Plomberie", IconKey.WRENCH, DEFAULT_DESCRIPTION, "#dbeafe", DEFAULT_BUDGET);
 
         assertThat(category.getId()).isEqualTo(CategoryId.of("cat_plomberie"));
         assertThat(category.getDemandCount()).isZero();
+        assertThat(category.getBudgetRange()).isEqualTo(DEFAULT_BUDGET);
     }
 
     @Test
     void shouldRejectBlankLabel() {
-        assertThatThrownBy(() -> ServiceCategory.create("  ", IconKey.WRENCH, "#dbeafe"))
+        assertThatThrownBy(() -> ServiceCategory.create(
+                "  ", IconKey.WRENCH, DEFAULT_DESCRIPTION, "#dbeafe", DEFAULT_BUDGET))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldRejectInvalidColor() {
-        assertThatThrownBy(() -> ServiceCategory.create("Peinture", IconKey.BRUSH, "not-a-color"))
+        assertThatThrownBy(() -> ServiceCategory.create(
+                "Peinture", IconKey.BRUSH, DEFAULT_DESCRIPTION, "not-a-color", DEFAULT_BUDGET))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldRejectBlankDescription() {
+        assertThatThrownBy(() -> ServiceCategory.create(
+                "Peinture", IconKey.BRUSH, "  ", "#ffe4e6", DEFAULT_BUDGET))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldRejectInvalidBudgetRange() {
+        assertThatThrownBy(() -> new BudgetRange(50000, 5000))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldIncrementDemandCount() {
-        ServiceCategory category = ServiceCategory.create("Jardinage", IconKey.LEAF, "#d1fae5");
+        ServiceCategory category = ServiceCategory.create(
+                "Jardinage", IconKey.LEAF, DEFAULT_DESCRIPTION, "#d1fae5", new BudgetRange(3000, 30000));
 
         category.incrementDemandCount();
         category.incrementDemandCount();
@@ -42,7 +64,8 @@ class ServiceCategoryTest {
 
     @Test
     void shouldComputePercentageShare() {
-        ServiceCategory category = ServiceCategory.create("Électricité", IconKey.BOLT, "#fef9c3");
+        ServiceCategory category = ServiceCategory.create(
+                "Électricité", IconKey.BOLT, DEFAULT_DESCRIPTION, "#fef9c3", new BudgetRange(5000, 60000));
         category.incrementDemandCount();
         category.incrementDemandCount();
         category.incrementDemandCount();
@@ -54,7 +77,8 @@ class ServiceCategoryTest {
 
     @Test
     void shouldReturnZeroPercentageWhenNoTotalDemand() {
-        ServiceCategory category = ServiceCategory.create("Serrurerie", IconKey.KEY, "#e0e7ff");
+        ServiceCategory category = ServiceCategory.create(
+                "Serrurerie", IconKey.KEY, DEFAULT_DESCRIPTION, "#e0e7ff", new BudgetRange(5000, 40000));
 
         assertThat(category.percentageShareOver(0)).isZero();
     }

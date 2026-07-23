@@ -4,9 +4,11 @@ import com.serviloc.categories.application.dto.CategoryDeletedResponse;
 import com.serviloc.categories.application.dto.CategoryIncrementResponse;
 import com.serviloc.categories.application.dto.CategoryResponse;
 import com.serviloc.categories.application.dto.CategoryUpsertRequest;
+import com.serviloc.categories.application.dto.ClientCategoryResponse;
 import com.serviloc.categories.application.mapper.CategoryDtoMapper;
 import com.serviloc.categories.domain.exception.CategoryNotFoundException;
 import com.serviloc.categories.domain.exception.DuplicateCategoryLabelException;
+import com.serviloc.categories.domain.model.BudgetRange;
 import com.serviloc.categories.domain.model.CategoryId;
 import com.serviloc.categories.domain.model.IconKey;
 import com.serviloc.categories.domain.model.ServiceCategory;
@@ -40,13 +42,16 @@ public class CategoryService {
     }
 
     /**
-     * GET /client/categories — liste publique, mise en cache Redis (TTL 1h configuré globalement).
+     * GET /client/categories — vue publique, mise en cache Redis (TTL 1h configuré globalement).
+     * Ne contient pas demandCount/percentageShare (voir ClientCategoryResponse).
      */
     @Transactional(readOnly = true)
     @Cacheable(cacheNames = CATEGORIES_CACHE, key = CLIENT_LIST_CACHE_KEY)
-    public List<CategoryResponse> listForClient() {
+    public List<ClientCategoryResponse> listForClient() {
         log.debug("Cache miss categories:client-list — lecture depuis la base");
-        return listAllWithStats();
+        return repository.findAll().stream()
+                .map(CategoryDtoMapper::toClientResponse)
+                .toList();
     }
 
     /**
@@ -81,7 +86,9 @@ public class CategoryService {
 
     /**
      * GET /internal/categories/stats — mêmes données que la liste, exposées séparément
-     * pour Service Missions (admin/stats).
+     * pour Service Missions (admin/stats). Forme inchangée (id/label/... + demandCount/
+     * percentageShare) : le remapping vers { name, percentage, color } pour
+     * admin/dashboard.popularCategories est fait côté Gateway.
      */
     @Transactional(readOnly = true)
     public List<CategoryResponse> getStats() {
@@ -94,7 +101,11 @@ public class CategoryService {
             throw new DuplicateCategoryLabelException(request.label());
         }
         ServiceCategory category = ServiceCategory.create(
-                request.label(), IconKey.fromWireFormat(request.iconKey()), request.color());
+                request.label(),
+                IconKey.fromWireFormat(request.iconKey()),
+                request.description(),
+                request.color(),
+                toBudgetRange(request.budgetRange()));
         ServiceCategory saved = repository.save(category);
         log.info("Catégorie créée : {}", saved.getId());
         return CategoryDtoMapper.toResponse(saved, repository.totalDemandCount());
@@ -112,7 +123,12 @@ public class CategoryService {
                     throw new DuplicateCategoryLabelException(request.label());
                 });
 
-        category.rename(request.label(), IconKey.fromWireFormat(request.iconKey()), request.color());
+        category.rename(
+                request.label(),
+                IconKey.fromWireFormat(request.iconKey()),
+                request.description(),
+                request.color(),
+                toBudgetRange(request.budgetRange()));
         ServiceCategory saved = repository.save(category);
         log.info("Catégorie mise à jour : {}", saved.getId());
         return CategoryDtoMapper.toResponse(saved, repository.totalDemandCount());
@@ -150,5 +166,9 @@ public class CategoryService {
         return categories.stream()
                 .map(c -> CategoryDtoMapper.toResponse(c, total))
                 .toList();
+    }
+
+    private static BudgetRange toBudgetRange(CategoryUpsertRequest.BudgetRangeRequest request) {
+        return new BudgetRange(request.min(), request.max());
     }
 }

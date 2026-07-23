@@ -11,48 +11,63 @@ import java.util.regex.Pattern;
 public class ServiceCategory {
 
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
+    private static final int MAX_DESCRIPTION_LENGTH = 500;
 
     private final CategoryId id;
     private String label;
     private IconKey iconKey;
+    private String description;
     private String color;
+    private BudgetRange budgetRange;
     private long demandCount;
     private final Instant createdAt;
     private Instant updatedAt;
 
-    private ServiceCategory(CategoryId id, String label, IconKey iconKey, String color,
-                             long demandCount, Instant createdAt, Instant updatedAt) {
+    private ServiceCategory(CategoryId id, String label, IconKey iconKey, String description, String color,
+                             BudgetRange budgetRange, long demandCount, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.label = label;
         this.iconKey = iconKey;
+        this.description = description;
         this.color = color;
+        this.budgetRange = budgetRange;
         this.demandCount = demandCount;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
     /** Factory method utilisée à la création (POST /admin/categories). */
-    public static ServiceCategory create(String label, IconKey iconKey, String color) {
+    public static ServiceCategory create(String label, IconKey iconKey, String description, String color,
+                                          BudgetRange budgetRange) {
         validateLabel(label);
         validateColor(color);
+        validateDescription(description);
         Objects.requireNonNull(iconKey, "iconKey est obligatoire");
+        Objects.requireNonNull(budgetRange, "budgetRange est obligatoire");
         Instant now = Instant.now();
-        return new ServiceCategory(CategoryId.fromLabel(label), label.trim(), iconKey, color, 0L, now, now);
+        return new ServiceCategory(CategoryId.fromLabel(label), label.trim(), iconKey,
+                description.trim(), color, budgetRange, 0L, now, now);
     }
 
     /** Reconstruction depuis la persistance : n'applique pas les invariants de création. */
-    public static ServiceCategory reconstitute(CategoryId id, String label, IconKey iconKey, String color,
-                                                long demandCount, Instant createdAt, Instant updatedAt) {
-        return new ServiceCategory(id, label, iconKey, color, demandCount, createdAt, updatedAt);
+    public static ServiceCategory reconstitute(CategoryId id, String label, IconKey iconKey, String description,
+                                                String color, BudgetRange budgetRange, long demandCount,
+                                                Instant createdAt, Instant updatedAt) {
+        return new ServiceCategory(id, label, iconKey, description, color, budgetRange, demandCount, createdAt, updatedAt);
     }
 
-    public void rename(String newLabel, IconKey newIconKey, String newColor) {
+    public void rename(String newLabel, IconKey newIconKey, String newDescription, String newColor,
+                        BudgetRange newBudgetRange) {
         validateLabel(newLabel);
         validateColor(newColor);
+        validateDescription(newDescription);
         Objects.requireNonNull(newIconKey, "iconKey est obligatoire");
+        Objects.requireNonNull(newBudgetRange, "budgetRange est obligatoire");
         this.label = newLabel.trim();
         this.iconKey = newIconKey;
+        this.description = newDescription.trim();
         this.color = newColor;
+        this.budgetRange = newBudgetRange;
         this.updatedAt = Instant.now();
     }
 
@@ -77,6 +92,16 @@ public class ServiceCategory {
         }
     }
 
+    private static void validateDescription(String description) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("La description de la catégorie est obligatoire");
+        }
+        if (description.trim().length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException(
+                    "La description ne peut pas dépasser " + MAX_DESCRIPTION_LENGTH + " caractères");
+        }
+    }
+
     private static void validateColor(String color) {
         if (color == null || !HEX_COLOR.matcher(color).matches()) {
             throw new IllegalArgumentException("La couleur doit être un code hexadécimal valide (ex: #dbeafe)");
@@ -95,8 +120,16 @@ public class ServiceCategory {
         return iconKey;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
     public String getColor() {
         return color;
+    }
+
+    public BudgetRange getBudgetRange() {
+        return budgetRange;
     }
 
     public long getDemandCount() {

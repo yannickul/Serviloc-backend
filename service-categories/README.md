@@ -39,6 +39,18 @@ Adapter ces valeurs dans `application-local.yml` si besoin.
 mvn test
 ```
 
+## Schémas de réponse
+
+Deux formes différentes de "catégorie" cohabitent volontairement :
+
+- **`ServiceCategory` (complète)** — `/admin/categories`, `/internal/**` :
+  `{ id, label, iconKey, description, color, budgetRange:{min,max}, demandCount, percentageShare }`
+- **`ClientServiceCategory` (publique)** — `/client/categories` uniquement :
+  `{ id, label, iconKey, description, color, budgetRange:{min,max} }` — **sans**
+  `demandCount`/`percentageShare` (ces stats restent internes ; la Gateway les récupère
+  séparément via `/internal/categories/stats` pour construire `admin/dashboard.popularCategories`
+  sous la forme `{ name, percentage, color }`).
+
 ## Endpoints
 
 | Méthode | Path | Rôle | Cache |
@@ -55,7 +67,9 @@ mvn test
 | PUT | `/internal/categories/{id}/increment` | Feign / rejeu manuel | — |
 
 Les endpoints `/internal/**` exigent le header `X-Internal-Token` (voir `serviloc.internal-token`
-dans `application.yml`, à synchroniser avec les autres microservices).
+dans `application.yml`, alimenté par la variable d'environnement `INTERNAL_TOKEN` — **aucun
+défaut** : le service refuse de démarrer si cette variable n'est pas définie en profil `docker`,
+à synchroniser avec les autres microservices).
 
 ## Événement RabbitMQ consommé
 

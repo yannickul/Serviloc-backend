@@ -25,13 +25,15 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     public Transaction save(Transaction t) {
         TransactionJpaEntity entity = jpa.findById(t.getId())
                 .orElse(new TransactionJpaEntity(
-                        t.getId(), t.getDemandId(), t.getClientId(), t.getProviderId(),
+                        t.getId(), t.getReference(), t.getDemandId(), t.getMissionId(),
+                        t.getClientId(), t.getProviderId(),
                         t.getQuoteId(), t.getAmount(), t.getCommissionRate(),
                         t.getCommissionAmount(), t.getNetAmount(),
                         t.getStatus(), t.getPaymentMethod(), t.getPhoneNumber()
                 ));
         entity.setStatus(t.getStatus());
         entity.setExternalRef(t.getExternalRef());
+        entity.setMissionId(t.getMissionId());
         return toDomain(jpa.save(entity));
     }
 
@@ -53,6 +55,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public Page<Transaction> findByStatus(TransactionStatus status, Pageable pageable) {
         return jpa.findByStatus(status, pageable).map(this::toDomain);
+    }
+
+    @Override
+    public List<Transaction> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.findAllByCreatedAtBetween(from, to).stream().map(this::toDomain).toList();
     }
 
     @Override
@@ -79,24 +86,14 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     private Transaction toDomain(TransactionJpaEntity e) {
-        try {
-            var ctor = Transaction.class.getDeclaredConstructor(
-                    UUID.class, UUID.class, UUID.class, UUID.class, UUID.class,
-                    double.class, double.class, double.class, double.class,
-                    TransactionStatus.class, String.class, String.class, String.class,
-                    LocalDateTime.class, LocalDateTime.class
-            );
-            ctor.setAccessible(true);
-            return ctor.newInstance(
-                    e.getId(), e.getDemandId(), e.getClientId(), e.getProviderId(),
-                    e.getQuoteId(), e.getAmount(), e.getCommissionRate(),
-                    e.getCommissionAmount(), e.getNetAmount(), e.getStatus(),
-                    e.getPaymentMethod(), e.getPhoneNumber(), e.getExternalRef(),
-                    e.getCreatedAt(), e.getUpdatedAt()
-            );
-        } catch (Exception ex) {
-            throw new RuntimeException("Erreur reconstitution Transaction", ex);
-        }
+        return new Transaction(
+                e.getId(), e.getReference(), e.getDemandId(), e.getMissionId(),
+                e.getClientId(), e.getProviderId(),
+                e.getQuoteId(), e.getAmount(), e.getCommissionRate(),
+                e.getCommissionAmount(), e.getNetAmount(), e.getStatus(),
+                e.getPaymentMethod(), e.getPhoneNumber(), e.getExternalRef(),
+                e.getCreatedAt(), e.getUpdatedAt()
+        );
     }
 
     @Override

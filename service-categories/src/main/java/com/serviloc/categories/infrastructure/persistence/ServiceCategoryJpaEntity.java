@@ -29,8 +29,17 @@ public class ServiceCategoryJpaEntity {
     @Column(name = "icon_key", nullable = false, length = 20)
     private IconKeyJpa iconKey;
 
+    @Column(nullable = false, length = 500)
+    private String description;
+
     @Column(nullable = false, length = 7)
     private String color;
+
+    @Column(name = "budget_min", nullable = false)
+    private int budgetMin;
+
+    @Column(name = "budget_max", nullable = false)
+    private int budgetMax;
 
     @Column(name = "demand_count", nullable = false)
     private long demandCount;
@@ -45,12 +54,16 @@ public class ServiceCategoryJpaEntity {
         // requis par JPA
     }
 
-    public ServiceCategoryJpaEntity(String id, String label, IconKeyJpa iconKey, String color,
-                                     long demandCount, Instant createdAt, Instant updatedAt) {
+    public ServiceCategoryJpaEntity(String id, String label, IconKeyJpa iconKey, String description, String color,
+                                     int budgetMin, int budgetMax, long demandCount,
+                                     Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.label = label;
         this.iconKey = iconKey;
+        this.description = description;
         this.color = color;
+        this.budgetMin = budgetMin;
+        this.budgetMax = budgetMax;
         this.demandCount = demandCount;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -76,12 +89,36 @@ public class ServiceCategoryJpaEntity {
         this.iconKey = iconKey;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public String getColor() {
         return color;
     }
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public int getBudgetMin() {
+        return budgetMin;
+    }
+
+    public void setBudgetMin(int budgetMin) {
+        this.budgetMin = budgetMin;
+    }
+
+    public int getBudgetMax() {
+        return budgetMax;
+    }
+
+    public void setBudgetMax(int budgetMax) {
+        this.budgetMax = budgetMax;
     }
 
     public long getDemandCount() {

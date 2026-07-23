@@ -1,7 +1,9 @@
 package com.serviloc.categories.application.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -23,10 +25,34 @@ public record CategoryUpsertRequest(
         @Schema(example = "leaf", requiredMode = Schema.RequiredMode.REQUIRED)
         String iconKey,
 
+        @NotBlank(message = "La description est obligatoire")
+        @Size(max = 500, message = "La description ne peut pas dépasser 500 caractères")
+        @Schema(example = "Entretien de jardins, tonte, taille de haies, plantations",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        String description,
+
         @NotBlank(message = "La couleur est obligatoire")
         @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "La couleur doit être un code hexadécimal (ex: #d1fae5)")
         @Schema(example = "#d1fae5", requiredMode = Schema.RequiredMode.REQUIRED)
-        String color
+        String color,
+
+        @NotNull(message = "budgetRange est obligatoire")
+        @Valid
+        BudgetRangeRequest budgetRange
 
 ) {
+
+    @Schema(name = "BudgetRangeRequest")
+    public record BudgetRangeRequest(
+
+            @jakarta.validation.constraints.PositiveOrZero(message = "Le budget minimum ne peut pas être négatif")
+            @Schema(example = "5000", requiredMode = Schema.RequiredMode.REQUIRED)
+            Integer min,
+
+            @jakarta.validation.constraints.PositiveOrZero(message = "Le budget maximum ne peut pas être négatif")
+            @Schema(example = "50000", requiredMode = Schema.RequiredMode.REQUIRED)
+            Integer max
+
+    ) {
+    }
 }

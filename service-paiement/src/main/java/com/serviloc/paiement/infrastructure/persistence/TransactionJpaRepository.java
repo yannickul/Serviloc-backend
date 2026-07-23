@@ -20,6 +20,7 @@ public interface TransactionJpaRepository
     Optional<TransactionJpaEntity> findByQuoteId(UUID quoteId);
     Optional<TransactionJpaEntity> findByDemandId(UUID demandId);
     Page<TransactionJpaEntity> findByStatus(TransactionStatus status, Pageable pageable);
+    List<TransactionJpaEntity> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
     List<TransactionJpaEntity> findByClientIdAndStatus(UUID clientId, TransactionStatus status);
     long countByStatus(TransactionStatus status);
 

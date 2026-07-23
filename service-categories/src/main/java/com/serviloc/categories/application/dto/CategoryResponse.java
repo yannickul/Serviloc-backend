@@ -5,10 +5,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.Serializable;
 
 /**
- * Forme exacte du schéma {@code ServiceCategory} défini dans API_CONTRACT.md §4.16.
- * Implémente Serializable car mis en cache Redis (sérialisation JDK ou JSON selon config).
+ * Forme complète d'une catégorie, utilisée par /admin/categories et /internal/**
+ * (inclut les statistiques demandCount/percentageShare, réservées à un usage interne —
+ * voir API_CONTRACT_INTERNAL.md). La forme publique exposée par /client/categories est
+ * {@link ClientCategoryResponse}, structurellement différente.
  */
-@Schema(name = "ServiceCategory", description = "Catégorie de service du référentiel ServiLoc")
+@Schema(name = "ServiceCategory", description = "Catégorie de service (vue complète, admin/internal)")
 public record CategoryResponse(
 
         @Schema(example = "cat_plomberie", accessMode = Schema.AccessMode.READ_ONLY)
@@ -20,8 +22,13 @@ public record CategoryResponse(
         @Schema(example = "wrench", allowableValues = {"wrench", "bolt", "broom", "key", "brush", "plus", "leaf"})
         String iconKey,
 
+        @Schema(example = "Réparation de fuites, installation sanitaire, dépannage plomberie")
+        String description,
+
         @Schema(example = "#dbeafe")
         String color,
+
+        BudgetRangeResponse budgetRange,
 
         @Schema(example = "47", accessMode = Schema.AccessMode.READ_ONLY)
         long demandCount,

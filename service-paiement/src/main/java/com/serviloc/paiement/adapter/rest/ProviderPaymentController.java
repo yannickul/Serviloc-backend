@@ -53,26 +53,44 @@ public class ProviderPaymentController {
 
     public record PayoutResponse(
             String id,
-            String transactionId,
+            String reference,
+            String missionId,
+            String category,
             double amount,
-            double commissionAmount,
+            double commission,
+            double netAmount,
             String status,
-            String externalRef,
-            String createdAt
+            String paidAt
     ) {}
 
+    /**
+     * Mapping Payout.PayoutStatus → statut attendu par le front (libere|sequestre|en_attente),
+     * décidé en équipe : FAILED est temporairement affiché comme "sequestre" en
+     * attendant une mise à jour du contrat (aucun équivalent "échec" côté front).
+     *   PENDING   → en_attente
+     *   COMPLETED → libere
+     *   FAILED    → sequestre (temporaire)
+     */
     private PayoutResponse toPayoutResponse(Payout p) {
+        String status = switch (p.getStatus()) {
+            case PENDING -> "en_attente";
+            case COMPLETED -> "libere";
+            case FAILED -> "sequestre";
+        };
+        String paidAt = p.getStatus() == Payout.PayoutStatus.COMPLETED && p.getUpdatedAt() != null
+                ? p.getUpdatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'+01:00'"))
+                : null;
+
         return new PayoutResponse(
                 p.getId().toString(),
-                p.getTransactionId().toString(),
+                p.getReference(),
+                p.getMissionId() != null ? p.getMissionId().toString() : null,
+                null, // category : aucune source de donnée actuellement (ni quote_accepted ni mission.completed ne la transportent) — à ajouter côté events si besoin confirmé
                 p.getAmount(),
                 p.getCommissionAmount(),
-                p.getStatus().name().toLowerCase(),
-                p.getExternalRef(),
-                p.getCreatedAt() != null
-                        ? p.getCreatedAt().format(
-                        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'+01:00'"))
-                        : null
+                p.getNetAmount(),
+                status,
+                paidAt
         );
     }
 }

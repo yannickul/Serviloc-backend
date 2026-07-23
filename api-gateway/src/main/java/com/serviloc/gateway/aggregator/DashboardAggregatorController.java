@@ -42,8 +42,10 @@ import java.util.function.Consumer;
  *   - admin/dashboard.pendingValidations : filtre `status` non implémenté côté service-utilisateurs
  *     (transmis à l'équipe concernée) → renvoie actuellement tous les prestataires, pas seulement
  *     ceux en attente de validation.
- *   - admin/stats.topProviders : endpoint /internal/providers/top toujours absent côté
- *     service-utilisateurs → tableau vide en attendant.
+ *
+ * GET /v1/admin/stats suit désormais le contrat frontend ({commissions, payments}) et dépend
+ * entièrement de service-paiement (voir ACTIONS_PAR_SERVICE.md) — ce n'est plus un dashboard de
+ * KPIs agrégés demands/missions/topProviders/popularCategories.
  */
 @RestController
 public class DashboardAggregatorController {
@@ -294,70 +296,29 @@ public class DashboardAggregatorController {
     // ════════════════════════════════════════════════════════════════════
     // GET /v1/admin/stats
     // ════════════════════════════════════════════════════════════════════
+    // Aligné sur API_CONTRACT frontend : {commissions:[...], payments:[...]}.
+    // N'est plus un dashboard de KPIs agrégés (demands/missions/topProviders/popularCategories) —
+    // cette responsabilité est passée entièrement à service-paiement (voir
+    // ACTIONS_PAR_SERVICE.md). Le Gateway attend un unique endpoint interne qui renvoie déjà
+    // les deux listes toutes prêtes, pour éviter d'avoir à les assembler ici.
 
     @GetMapping("/v1/admin/stats")
     public Mono<ResponseEntity<ObjectNode>> adminStats(
             @RequestParam(required = false, defaultValue = "2026-01-01T00:00:00") String from,
             @RequestParam(required = false, defaultValue = "2099-12-31T23:59:59") String to) {
 
-        // Même endpoint que admin/dashboard : couvre demands ET missions en un seul appel
-        // (audit §4.1-2 — remplace les 2 endpoints /internal/stats/summary + /demands-missions
-        // qui n'existent pas sous cette forme).
-        Mono<JsonNode> missionsDashboardMono = gateway.getInternalJson(
-                        "lb://service-missions/internal/dashboard/missions")
+        Mono<JsonNode> adminFullMono = gateway.getInternalJson(
+                        "lb://service-paiement/internal/stats/admin-full?from=" + from + "&to=" + to)
                 .map(gateway::unwrapData)
                 .defaultIfEmpty(mapper.createObjectNode());
 
-        Mono<JsonNode> financialsMono = gateway.getInternalJson(
-                        "lb://service-paiement/internal/stats/financials?from=" + from + "&to=" + to)
-                .defaultIfEmpty(mapper.createObjectNode());
+        return adminFullMono.map(adminFull -> {
+            ObjectNode data = mapper.createObjectNode();
+            data.set("commissions", asArray(adminFull.path("commissions")));
+            data.set("payments", asArray(adminFull.path("payments")));
 
-        // ⚠️ Endpoint toujours absent côté service-utilisateurs (audit §4.4) → transmis à l'équipe.
-        Mono<JsonNode> topProvidersMono = gateway.getInternalJson(
-                        "lb://service-utilisateurs/internal/providers/top?limit=4")
-                .defaultIfEmpty(mapper.createArrayNode());
-
-        Mono<JsonNode> popularCategoriesMono = gateway.getInternalJson(
-                        "lb://service-categories/internal/categories/stats")
-                .map(gateway::unwrapData)
-                .defaultIfEmpty(mapper.createArrayNode());
-
-        return Mono.zip(missionsDashboardMono, financialsMono, topProvidersMono, popularCategoriesMono)
-                .map(t -> {
-                    JsonNode missionsDashboard = t.getT1();
-                    JsonNode financials = t.getT2();
-                    JsonNode topProviders = t.getT3();
-                    JsonNode popularCategories = sortDescAndTruncate(t.getT4(), "demandCount", 6);
-
-                    ObjectNode demands = mapper.createObjectNode();
-                    demands.set("total", numberOr(missionsDashboard.path("totalDemands"), 0));
-                    demands.set("open", numberOr(missionsDashboard.path("openDemands"), 0));
-                    demands.set("inProgress", numberOr(missionsDashboard.path("inProgressDemands"), 0));
-                    demands.set("completed", numberOr(missionsDashboard.path("completedDemands"), 0));
-                    demands.set("cancelled", numberOr(missionsDashboard.path("cancelledDemands"), 0));
-
-                    ObjectNode missions = mapper.createObjectNode();
-                    missions.set("total", numberOr(missionsDashboard.path("totalMissions"), 0));
-                    missions.set("completed", numberOr(missionsDashboard.path("completedMissions"), 0));
-                    missions.set("inDispute", numberOr(missionsDashboard.path("disputedMissions"), 0));
-                    missions.set("completionRate", numberOr(missionsDashboard.path("completionRate"), 0));
-
-                    ObjectNode financialsOut = mapper.createObjectNode();
-                    financialsOut.set("totalRevenue", numberOr(financials.path("totalRevenue"), 0));
-                    financialsOut.set("commissionEarned", numberOr(financials.path("commissionEarned"), 0));
-                    financialsOut.set("sequesteredAmount", numberOr(financials.path("sequesteredAmount"), 0));
-                    // periodBreakdown : aucun service ne fournit de ventilation mensuelle (audit §4.3).
-                    financialsOut.set("periodBreakdown", mapper.createArrayNode());
-
-                    ObjectNode data = mapper.createObjectNode();
-                    data.set("demands", demands);
-                    data.set("missions", missions);
-                    data.set("financials", financialsOut);
-                    data.set("topProviders", asArray(topProviders));
-                    data.set("popularCategories", asArray(popularCategories));
-
-                    return ResponseEntity.ok(envelope(data));
-                });
+            return ResponseEntity.ok(envelope(data));
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════

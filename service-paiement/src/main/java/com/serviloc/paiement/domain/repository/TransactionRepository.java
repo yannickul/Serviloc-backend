@@ -16,6 +16,7 @@ public interface TransactionRepository {
     Optional<Transaction> findByQuoteId(UUID quoteId);
     Optional<Transaction> findByDemandId(UUID demandId);
     Page<Transaction> findByStatus(TransactionStatus status, Pageable pageable);
+    List<Transaction> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
     List<Transaction> findByClientIdAndStatus(UUID clientId, TransactionStatus status);
     double sumAmountByProviderIdAndCreatedAtBetween(UUID providerId,
                                                     LocalDateTime from,

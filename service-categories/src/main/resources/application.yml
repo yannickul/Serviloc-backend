@@ -65,7 +65,7 @@ eureka:
     prefer-ip-address: true
 
 serviloc:
-  internal-token: ${SERVILOC_INTERNAL_TOKEN:changeme-internal-token}
+  internal-token: ${INTERNAL_TOKEN}
 
 springdoc:
   api-docs:
