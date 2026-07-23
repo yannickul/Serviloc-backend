@@ -6,9 +6,9 @@ spring:
     name: service-litiges
 
   datasource:
-    url: jdbc:postgresql://${DB_LITIGES_HOST}:${DB_LITIGES_PORT}/${DB_LITIGES_NAME}
-    username: ${DB_LITIGES_USER}
-    password: ${DB_LITIGES_PASSWORD}
+    url: jdbc:postgresql://localhost:5445/${POSTGRES_LITIGES_DB:db_litiges}
+    username: ${POSTGRES_LITIGES_USER}
+    password: ${POSTGRES_LITIGES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -30,10 +30,16 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://${EUREKA_HOSTNAME}:8761/eureka/
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 10
   instance:
     prefer-ip-address: true
-    ip-address: 127.0.0.1
+    hostname: ${HOSTNAME}
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 feign:
   circuitbreaker:

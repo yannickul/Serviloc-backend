@@ -1,8 +1,3 @@
-# =============================================================================
-# ServiLoc — Eureka Server — Configuration
-# Port    : 8761
-# Rôle    : Registre centralisé de service discovery
-# =============================================================================
 
 server:
   port: 8761
@@ -11,35 +6,23 @@ spring:
   application:
     name: eureka-server
 
-# =============================================================================
-# Eureka Server — Configuration
-# Ce service est le serveur Eureka, il ne s'enregistre PAS lui-même.
-# =============================================================================
 eureka:
   instance:
-    hostname: ${EUREKA_HOSTNAME:localhost}
-    # En Docker, utilise l'IP du conteneur plutôt que le hostname
+    hostname: ${EUREKA_HOSTNAME:eureka-server}
     prefer-ip-address: false
-
   client:
-    # Le serveur Eureka ne s'enregistre pas auprès de lui-même
     register-with-eureka: false
-    # Le serveur Eureka ne récupère pas le registre depuis un autre serveur
     fetch-registry: false
     service-url:
       defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
-
   server:
-    # Pas de délai d'attente au démarrage (mode dev — désactiver en prod)
-    wait-time-in-ms-when-sync-empty: 0
-    # Intervalle de renouvellement du registre (en secondes)
+    # Prod : on laisse le sync se faire normalement au démarrage du cluster
+    wait-time-in-ms-when-sync-empty: 5000
     renewal-threshold-update-interval-ms: 15000
-    # Temps d'expiration des instances sans heartbeat (en secondes)
-    eviction-interval-timer-in-ms: 10000
-    # En mode dev, désactiver le "self-preservation" pour éviter les faux positifs
-    # ATTENTION : remettre à true en production
-    enable-self-preservation: false
-
+    # Prod : éviction moins agressive pour absorber les micro-coupures réseau
+    eviction-interval-timer-in-ms: 60000
+    # Prod : PROTECTION ACTIVÉE — empêche l'éviction en masse en cas d'incident réseau
+    enable-self-preservation: true
 # =============================================================================
 # Actuator — Healthcheck exposé pour Docker Compose
 # Docker Compose utilise GET /actuator/health pour le condition: service_healthy

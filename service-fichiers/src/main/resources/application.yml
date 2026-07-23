@@ -6,9 +6,9 @@ spring:
     name: service-fichiers
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5448}/${DB_NAME:db_media}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:changeme}
+    url: jdbc:postgresql://localhost:5448/${POSTGRES_MEDIA_DB:db_media}
+    username: ${POSTGRES_MEDIA_USER}
+    password: ${POSTGRES_MEDIA_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -26,7 +26,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:changeme}
+      password: ${REDIS_PASSWORD}
 
   cache:
     type: redis
@@ -42,18 +42,22 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-    register-with-eureka: true
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
     fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 10
   instance:
     prefer-ip-address: true
-    ip-address: 127.0.0.1
+    hostname: ${HOSTNAME}
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 # --- MinIO (stockage objet compatible S3) ---
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
-  access-key: ${MINIO_ACCESS_KEY:minioadmin}
-  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  access-key: ${MINIO_ROOT_USER}
+  secret-key: ${MINIO_ROOT_PASSWORD}
   bucket: ${MINIO_BUCKET:serviloc-media}
   public-base-url: ${MINIO_PUBLIC_URL:http://localhost:9000/serviloc-media}
 

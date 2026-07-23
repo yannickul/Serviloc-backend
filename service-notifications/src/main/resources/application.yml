@@ -6,9 +6,9 @@ spring:
     name: service-notifications
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5446}/${DB_NAME:}
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
+    url: jdbc:postgresql://localhost:5446/${POSTGRES_NOTIFS_DB:db_notifications}
+    username: ${POSTGRES_NOTIFS_USER}
+    password: ${POSTGRES_NOTIFS_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -25,8 +25,8 @@ spring:
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:}
-    password: ${RABBITMQ_PASSWORD:}
+    username: ${RABBITMQ_DEFAULT_USER}
+    password: ${RABBITMQ_DEFAULT_PASS}
     listener:
       simple:
         retry:
@@ -39,12 +39,16 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-    register-with-eureka: true
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
     fetch-registry: true
+    register-with-eureka: true
+    registry-fetch-interval-seconds: 10
   instance:
     prefer-ip-address: true
-    ip-address: 127.0.0.1
+    hostname: ${HOSTNAME}
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
 
 # --- Messaging ServiLoc (RabbitMQ) ---
 serviloc:
