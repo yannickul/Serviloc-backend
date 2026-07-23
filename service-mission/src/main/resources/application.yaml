@@ -11,9 +11,10 @@ spring:
     password: ${POSTGRES_MISSIONS_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 60000
+      initialization-fail-timeout: -1
 
   jpa:
     hibernate:

@@ -16,6 +16,11 @@ spring:
     username: ${POSTGRES_PAIEMENT_USER:svc_paiement}
     password: ${POSTGRES_PAIEMENT_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 60000
+      initialization-fail-timeout: -1
 
   jpa:
     hibernate:
