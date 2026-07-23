@@ -38,16 +38,18 @@ public class DemandService implements DemandUseCase {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final QuotePort quotePort;
+    private final UtilisateurClient utilisateurClient;
 
     public DemandService(
             DemandRepository demandRepository,
             MissionEventPublisher eventPublisher,
             CategorieClient categorieClient,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper, QuotePort quotePort) {
+            ObjectMapper objectMapper, QuotePort quotePort, UtilisateurClient utilisateurClient) {
         this.demandRepository = demandRepository;
         this.eventPublisher = eventPublisher;
         this.categorieClient = categorieClient;
+        this.utilisateurClient = utilisateurClient;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.quotePort = quotePort;
@@ -276,8 +278,8 @@ public class DemandService implements DemandUseCase {
         NegociationCreateQuoteRequest negRequest = new NegociationCreateQuoteRequest(
                 demandId,
                 providerId,
-                request.getAmount(),
-                request.getDescription(),
+                request.getLaborAmount(),
+                request.getLaborDescription(),
                 mapMaterialInputs(request.getMaterials()),
                 request.getEstimatedDurationHours(),
                 request.getValidityDays());
@@ -330,8 +332,8 @@ public class DemandService implements DemandUseCase {
 
         NegociationUpdateQuoteRequest negRequest = new NegociationUpdateQuoteRequest(
                 providerId,
-                request.getAmount(),
-                request.getDescription(),
+                request.getLaborAmount(),
+                request.getLaborDescription(),
                 mapMaterialInputs(request.getMaterials()),
                 request.getEstimatedDurationHours(),
                 request.getValidityDays());
@@ -340,10 +342,121 @@ public class DemandService implements DemandUseCase {
         return toQuoteResponse(quote);
     }
 
+    @Transactional(readOnly = true)
+    @Override
+    public QuoteResponse getQuoteByIdForProvider(String quoteId, String providerId) {
+        QuoteDto quote = quotePort.getQuoteById(quoteId);
+        if (quote == null || !providerId.equals(quote.providerId())) {
+            throw new QuoteNotFoundException(quoteId);
+        }
+        return toQuoteResponse(quote);
+    }
+
+    @Override
+    public QuoteResponse updateQuoteByIdForProvider(String quoteId, String providerId, UpdateQuoteRequest request) {
+        QuoteDto existing = quotePort.getQuoteById(quoteId);
+        if (existing == null || !providerId.equals(existing.providerId())) {
+            throw new QuoteNotFoundException(quoteId);
+        }
+
+        NegociationUpdateQuoteRequest negRequest = new NegociationUpdateQuoteRequest(
+                providerId,
+                request.getLaborAmount(),
+                request.getLaborDescription(),
+                mapMaterialInputs(request.getMaterials()),
+                request.getEstimatedDurationHours(),
+                request.getValidityDays());
+
+        QuoteDto quote = quotePort.updateQuote(quoteId, negRequest);
+        return toQuoteResponse(quote);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ApplicationResponse> getApplicationsForDemand(String demandId) {
+        demandRepository.findById(demandId)
+                .orElseThrow(() -> new DemandNotFoundException(demandId));
+
+        List<QuoteDto> quotes = quotePort.getQuotesByDemand(demandId);
+        return quotes.stream()
+                .map(q -> {
+                    ProviderLookupResponse provider = fetchProviderSafely(q.providerId());
+                    return new ApplicationResponse(
+                            q.id(),
+                            demandId,
+                            q.providerId(),
+                            provider != null ? provider.fullName() : null,
+                            provider != null ? provider.avatarInitial() : null,
+                            provider != null ? provider.specialty() : null,
+                            provider != null ? provider.rating() : 0,
+                            provider != null ? provider.completedMissions() : 0,
+                            provider != null ? provider.hourlyRate() : 0,
+                            q.totalAmount(),
+                            mapQuoteStatusToApplicationStatus(q.status()),
+                            q.createdAt());
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public QuoteDetailResponse getQuoteDetail(String quoteId) {
+        QuoteDto quote = quotePort.getQuoteById(quoteId);
+        if (quote == null) {
+            throw new QuoteNotFoundException(quoteId);
+        }
+
+        Demand demand = demandRepository.findById(quote.demandId())
+                .orElseThrow(() -> new DemandNotFoundException(quote.demandId()));
+
+        ProviderLookupResponse provider = fetchProviderSafely(quote.providerId());
+
+        QuoteDetailResponse.ProviderInfo providerInfo = new QuoteDetailResponse.ProviderInfo(
+                quote.providerId(),
+                provider != null ? provider.fullName() : null,
+                provider != null ? provider.avatarInitial() : null,
+                provider != null ? provider.rating() : 0,
+                provider != null ? provider.completedMissions() : 0);
+
+        String categoryLabel;
+        try {
+            categoryLabel = categorieClient.getCategoryById(demand.getCategoryId()).getLabel();
+        } catch (Exception e) {
+            log.warn("Impossible de résoudre la catégorie {} — {}", demand.getCategoryId(), e.getMessage());
+            categoryLabel = demand.getCategoryId();
+        }
+        QuoteDetailResponse.DemandInfo demandInfo = new QuoteDetailResponse.DemandInfo(
+                categoryLabel, demand.getDescription());
+
+        return new QuoteDetailResponse(toQuoteResponse(quote), providerInfo, demandInfo);
+    }
+
+    private ProviderLookupResponse fetchProviderSafely(String providerId) {
+        try {
+            return utilisateurClient.getProviderById(providerId);
+        } catch (Exception e) {
+            log.warn("Impossible de récupérer le profil du prestataire {} — {}", providerId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * "en_attente|accepte|refuse|expire" (Quote, côté service-negociations)
+     * -> "en_attente|acceptee|refusee" (Application, côté frontend).
+     */
+    private String mapQuoteStatusToApplicationStatus(String quoteStatus) {
+        if (quoteStatus == null) return "en_attente";
+        return switch (quoteStatus) {
+            case "accepte" -> "acceptee";
+            case "refuse", "expire" -> "refusee";
+            default -> "en_attente";
+        };
+    }
+
     private List<MaterialInputDto> mapMaterialInputs(List<QuoteMaterialInput> inputs) {
         if (inputs == null) return null;
         return inputs.stream()
-                .map(m -> new MaterialInputDto(m.getName(), m.getQuantity(), m.getUnitPrice()))
+                .map(m -> new MaterialInputDto(m.getDesignation(), m.getQuantity(), m.getUnitPrice()))
                 .collect(Collectors.toList());
     }
 
@@ -408,6 +521,10 @@ public class DemandService implements DemandUseCase {
     private QuoteResponse toQuoteResponse(QuoteDto quote) {
         QuoteResponse response = new QuoteResponse();
         response.setId(quote.id());
+        // Repli temporaire tant que service-negociations n'envoie pas encore de reference
+        // (cf. remarque à leur adresser) — à retirer dès qu'ils l'exposent.
+        response.setReference(quote.reference() != null ? quote.reference()
+                : "DEV-" + quote.id().substring(Math.max(0, quote.id().length() - 8)).toUpperCase());
         response.setDemandId(quote.demandId());
         response.setProviderId(quote.providerId());
         response.setClientId(quote.clientId());

@@ -59,6 +59,12 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
                 .stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<ProviderProfile> findTopByCompletedMissions(int limit) {
+        return jpa.findTop50ByOrderByCompletedMissionsDesc()
+                .stream().limit(limit).map(this::toDomain).toList();
+    }
+
     // ─── Mappers ──────────────────────────────────────────────────
 
     private ProviderProfile toDomain(ProviderProfileJpaEntity e) {

@@ -6,6 +6,7 @@ import java.util.List;
 
 public record QuoteDto(
         String id,
+        String reference,
         String demandId,
         String providerId,
         String clientId,

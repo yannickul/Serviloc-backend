@@ -18,9 +18,18 @@ public interface ProviderProfileJpaRepository extends JpaRepository<ProviderProf
      * Requête Haversine — filtre les prestataires dans un rayon donné.
      * Formule : d = 6371 * acos(cos(lat1)*cos(lat2)*cos(lng2-lng1) + sin(lat1)*sin(lat2))
      */
+    /**
+     * Requête Haversine — filtre les prestataires dans un rayon donné.
+     * Formule : d = 6371 * acos(cos(lat1)*cos(lat2)*cos(lng2-lng1) + sin(lat1)*sin(lat2))
+     *
+     * Fix : ajout de "p.isEstCertifie = true" — un prestataire non vérifié
+     * ne peut pas exécuter de mission et ne doit donc jamais apparaître dans
+     * les résultats proposés pour une demande.
+     */
     @Query("""
         SELECT p FROM ProviderProfileJpaEntity p
         WHERE p.isAvailable = true
+        AND p.estCertifie = true
         AND p.latitude IS NOT NULL
         AND p.longitude IS NOT NULL
         AND (:specialty IS NULL OR LOWER(p.specialty) = LOWER(:specialty))
@@ -41,4 +50,7 @@ public interface ProviderProfileJpaRepository extends JpaRepository<ProviderProf
             @Param("minRating") double minRating,
             @Param("maxRate")   double maxRate
     );
+
+    // ─── GET /internal/providers/top ────────────────────────────────
+    List<ProviderProfileJpaEntity> findTop50ByOrderByCompletedMissionsDesc();
 }

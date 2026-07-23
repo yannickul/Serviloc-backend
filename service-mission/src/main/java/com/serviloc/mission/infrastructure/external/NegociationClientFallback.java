@@ -16,7 +16,7 @@ public class NegociationClientFallback implements NegociationClient {
     @Override
     public QuoteDto getQuoteById(String quoteId) {
         log.warn("NegociationClient indisponible — quoteId={} non résolu", quoteId);
-        return new QuoteDto(quoteId, null, null, null, null, BigDecimal.ZERO,
+        return new QuoteDto(quoteId, null, null, null, null, null, BigDecimal.ZERO,
                 Collections.emptyList(), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, null);
     }
 

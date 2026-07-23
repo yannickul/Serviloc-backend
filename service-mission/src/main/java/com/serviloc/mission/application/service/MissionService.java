@@ -98,9 +98,33 @@ public class MissionService implements MissionUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MissionResponse> getMissionsByClient(String clientId) {
-        return missionRepository.findByClientId(clientId)
-                .stream().map(this::toResponse).collect(Collectors.toList());
+    public PagedResponse<MissionResponse> getMissionsByClient(String clientId, String status, int page, int limit) {
+        List<MissionResponse> all = missionRepository.findByClientId(clientId).stream()
+                .filter(m -> status == null || status.isBlank()
+                        || m.getStatus().name().equalsIgnoreCase(status))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+
+        int fromIndex = Math.min((page - 1) * limit, all.size());
+        int toIndex = Math.min(fromIndex + limit, all.size());
+        List<MissionResponse> pageContent = all.subList(fromIndex, toIndex);
+
+        return PagedResponse.of(pageContent, page, limit, all.size());
+    }
+
+    @Override
+    public void updateProviderLocation(String missionId, String providerId,
+            com.serviloc.mission.application.dto.request.LocationDto locationDto) {
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionNotFoundException(missionId));
+
+        if (!mission.getProviderId().equals(providerId)) {
+            throw new UnauthorizedMissionAccessException(providerId, missionId, "mission");
+        }
+
+        Location location = new Location(locationDto.getLat(), locationDto.getLng(), null);
+        mission.setProviderLocation(location);
+        missionRepository.save(mission);
     }
 
     // Tâche 3 — POST /provider/missions/:id/start

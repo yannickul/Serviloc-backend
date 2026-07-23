@@ -5,8 +5,10 @@ import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
 import com.serviloc.mission.application.dto.request.CreateQuoteRequest;
 import com.serviloc.mission.application.dto.request.UpdateQuoteRequest;
 import com.serviloc.mission.application.dto.response.ApplyDemandResponse;
+import com.serviloc.mission.application.dto.response.ApplicationResponse;
 import com.serviloc.mission.application.dto.response.DemandResponse;
 import com.serviloc.mission.application.dto.response.PagedResponse;
+import com.serviloc.mission.application.dto.response.QuoteDetailResponse;
 import com.serviloc.mission.application.dto.response.QuoteResponse;
 import com.serviloc.mission.domain.model.DemandStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,4 +43,11 @@ public interface DemandUseCase {
     QuoteResponse getQuoteForDemandAndProvider(String demandId, String providerId);
 
     QuoteResponse updateQuoteForDemand(String demandId, String providerId, UpdateQuoteRequest request);
+
+    /** Accès direct à un devis par son id (sans passer par la demande), réservé au prestataire propriétaire. */
+    QuoteResponse getQuoteByIdForProvider(String quoteId, String providerId);
+    QuoteResponse updateQuoteByIdForProvider(String quoteId, String providerId, UpdateQuoteRequest request);
+
+    List<ApplicationResponse> getApplicationsForDemand(String demandId);
+    QuoteDetailResponse getQuoteDetail(String quoteId);
 }

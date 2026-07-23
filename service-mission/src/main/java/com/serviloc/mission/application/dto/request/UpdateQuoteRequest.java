@@ -10,10 +10,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class UpdateQuoteRequest {
-    @NotNull(message = "Le montant est obligatoire")
-    private BigDecimal amount;
-    @NotBlank(message = "La description est obligatoire")
-    private String description;
+    @NotNull(message = "Le montant de main d'œuvre est obligatoire")
+    private BigDecimal laborAmount;
+    @NotBlank(message = "La description de la main d'œuvre est obligatoire")
+    private String laborDescription;
     @Valid
     private List<QuoteMaterialInput> materials;
     @NotNull(message = "La durée estimée est obligatoire")
@@ -23,10 +23,10 @@ public class UpdateQuoteRequest {
     @Min(value = 1, message = "validityDays doit être >= 1")
     private Integer validityDays;
 
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public BigDecimal getLaborAmount() { return laborAmount; }
+    public void setLaborAmount(BigDecimal laborAmount) { this.laborAmount = laborAmount; }
+    public String getLaborDescription() { return laborDescription; }
+    public void setLaborDescription(String laborDescription) { this.laborDescription = laborDescription; }
     public List<QuoteMaterialInput> getMaterials() { return materials; }
     public void setMaterials(List<QuoteMaterialInput> materials) { this.materials = materials; }
     public Integer getEstimatedDurationHours() { return estimatedDurationHours; }
@@ -34,4 +34,3 @@ public class UpdateQuoteRequest {
     public Integer getValidityDays() { return validityDays; }
     public void setValidityDays(Integer validityDays) { this.validityDays = validityDays; }
 }
-

@@ -71,6 +71,16 @@ public class ProviderMissionController {
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
+    @PatchMapping("/missions/{id}/location")
+    public ResponseEntity<ApiResponse<Void>> updateLocation(
+            @PathVariable String id,
+            @RequestHeader("X-User-Id") String providerId,
+            @Valid @RequestBody com.serviloc.mission.application.dto.request.LocationDto request) {
+
+        missionUseCase.updateProviderLocation(id, providerId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
     @PostMapping("/missions/{id}/steps")
     public ResponseEntity<ApiResponse<DefineStepsResponse>> defineSteps(
             @PathVariable String id,

@@ -37,14 +37,11 @@ public class ConversationController {
     // ─── GET /client/conversations ────────────────────────────────
 
     @GetMapping("/client/conversations")
-    @Operation(summary = "Liste des conversations du client")
-    public ResponseEntity<ApiResponse<ConversationListResponse>> getClientConversations(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
+    @Operation(summary = "Liste des conversations du client (tableau brut, sans pagination)")
+    public ResponseEntity<ApiResponse<java.util.List<ConversationResponse>>> getClientConversations(
+            @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(ApiResponse.ok(
-                conversationService.getClientConversations(
-                        UUID.fromString(userId), page, limit)));
+                conversationService.getClientConversations(UUID.fromString(userId))));
     }
 
     // ─── GET /client/conversations/:id/messages ───────────────────
@@ -74,17 +71,26 @@ public class ConversationController {
                                 id, UUID.fromString(userId), "client", request)));
     }
 
+    // ─── DELETE /client/conversations/:id/messages/:messageId ────
+
+    @DeleteMapping("/client/conversations/{id}/messages/{messageId}")
+    @Operation(summary = "Supprimer (soft-delete) un message envoyé (client)")
+    public ResponseEntity<ApiResponse<DeleteMessageResponse>> deleteClientMessage(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable UUID id,
+            @PathVariable UUID messageId) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                conversationService.deleteMessage(id, messageId, UUID.fromString(userId))));
+    }
+
     // ─── GET /provider/conversations ──────────────────────────────
 
     @GetMapping("/provider/conversations")
-    @Operation(summary = "Liste des conversations du prestataire")
-    public ResponseEntity<ApiResponse<ConversationListResponse>> getProviderConversations(
-            @RequestHeader("X-User-Id") String userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int limit) {
+    @Operation(summary = "Liste des conversations du prestataire (tableau brut, sans pagination)")
+    public ResponseEntity<ApiResponse<java.util.List<ConversationResponse>>> getProviderConversations(
+            @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(ApiResponse.ok(
-                conversationService.getProviderConversations(
-                        UUID.fromString(userId), page, limit)));
+                conversationService.getProviderConversations(UUID.fromString(userId))));
     }
 
     // ─── GET /provider/conversations/:id/messages ─────────────────
@@ -112,5 +118,17 @@ public class ConversationController {
                 .body(ApiResponse.ok(
                         conversationService.sendMessage(
                                 id, UUID.fromString(userId), "provider", request)));
+    }
+
+    // ─── DELETE /provider/conversations/:id/messages/:messageId ──
+
+    @DeleteMapping("/provider/conversations/{id}/messages/{messageId}")
+    @Operation(summary = "Supprimer (soft-delete) un message envoyé (prestataire)")
+    public ResponseEntity<ApiResponse<DeleteMessageResponse>> deleteProviderMessage(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable UUID id,
+            @PathVariable UUID messageId) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                conversationService.deleteMessage(id, messageId, UUID.fromString(userId))));
     }
 }

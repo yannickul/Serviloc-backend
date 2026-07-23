@@ -8,6 +8,7 @@ import com.serviloc.negociations.domain.repository.ConversationRepository;
 import com.serviloc.negociations.domain.repository.MessageRepository;
 import com.serviloc.negociations.domain.repository.QuoteRepository;
 import com.serviloc.negociations.infrastructure.external.FichiersClient;
+import com.serviloc.negociations.infrastructure.external.UtilisateursClient;
 import com.serviloc.negociations.infrastructure.messaging.NegociationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ public class ConversationService {
     private final QuoteRepository quoteRepository;
     private final NegociationEventPublisher eventPublisher;
     private final FichiersClient fichiersClient;
+    private final UtilisateursClient utilisateursClient;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${internal.token}")
@@ -46,12 +48,14 @@ public class ConversationService {
                                QuoteRepository quoteRepository,
                                NegociationEventPublisher eventPublisher,
                                FichiersClient fichiersClient,
+                               UtilisateursClient utilisateursClient,
                                SimpMessagingTemplate messagingTemplate) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.quoteRepository = quoteRepository;
         this.eventPublisher = eventPublisher;
         this.fichiersClient = fichiersClient;
+        this.utilisateursClient = utilisateursClient;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -84,35 +88,29 @@ public class ConversationService {
     // ─── GET /client/conversations ────────────────────────────────
 
     @Transactional(readOnly = true)
-    public ConversationListResponse getClientConversations(UUID clientId,
-                                                           int page, int limit) {
-        PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<Conversation> result = conversationRepository
-                .findByClientIdOrderByLastMessageAtDesc(clientId, pageable);
+    public List<ConversationResponse> getClientConversations(UUID clientId) {
+        List<Conversation> conversations = conversationRepository
+                .findByClientIdOrderByLastMessageAtDesc(clientId,
+                        org.springframework.data.domain.Pageable.unpaged())
+                .getContent();
 
-        return new ConversationListResponse(
-                result.getContent().stream()
-                        .map(c -> toConversationResponse(c, clientId))
-                        .toList(),
-                new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
-        );
+        return conversations.stream()
+                .map(c -> toConversationResponse(c, clientId))
+                .toList();
     }
 
     // ─── GET /provider/conversations ──────────────────────────────
 
     @Transactional(readOnly = true)
-    public ConversationListResponse getProviderConversations(UUID providerId,
-                                                             int page, int limit) {
-        PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<Conversation> result = conversationRepository
-                .findByProviderIdOrderByLastMessageAtDesc(providerId, pageable);
+    public List<ConversationResponse> getProviderConversations(UUID providerId) {
+        List<Conversation> conversations = conversationRepository
+                .findByProviderIdOrderByLastMessageAtDesc(providerId,
+                        org.springframework.data.domain.Pageable.unpaged())
+                .getContent();
 
-        return new ConversationListResponse(
-                result.getContent().stream()
-                        .map(c -> toConversationResponse(c, providerId))
-                        .toList(),
-                new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
-        );
+        return conversations.stream()
+                .map(c -> toConversationResponse(c, providerId))
+                .toList();
     }
 
     // ─── GET /client|provider/conversations/:id/messages ──────────
@@ -197,6 +195,44 @@ public class ConversationService {
         return response;
     }
 
+    // ─── DELETE /client|provider/conversations/:id/messages/:messageId ───
+
+    public DeleteMessageResponse deleteMessage(UUID conversationId, UUID messageId,
+                                               UUID requesterId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation introuvable"));
+
+        if (!conv.getClientId().equals(requesterId) &&
+                !conv.getProviderId().equals(requesterId)) {
+            throw new IllegalStateException("Accès non autorisé à cette conversation");
+        }
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message introuvable"));
+
+        if (!message.getConversationId().equals(conversationId)) {
+            throw new IllegalArgumentException(
+                    "Ce message n'appartient pas à cette conversation");
+        }
+
+        // Seul l'auteur du message peut le supprimer
+        if (!message.getSenderId().equals(requesterId)) {
+            throw new IllegalStateException("Seul l'auteur du message peut le supprimer");
+        }
+
+        message.softDelete();
+        messageRepository.save(message);
+        log.info("[NEGO] Message supprimé (soft-delete) : id={} convId={}",
+                messageId, conversationId);
+
+        // Diffusion temps réel — l'autre participant voit le message masqué en direct
+        messagingTemplate.convertAndSend(
+                "/topic/conversation." + conversationId,
+                toMessageResponse(message, null));
+
+        return new DeleteMessageResponse(messageId.toString(), true);
+    }
+
     // ─── GET /internal/quotes/:quoteId ────────────────────────────
 
     @Transactional(readOnly = true)
@@ -230,15 +266,31 @@ public class ConversationService {
                 ? c.getUnreadCountClient()
                 : c.getUnreadCountProvider();
 
-        // Stub participants — sera enrichi avec Feign Utilisateurs en S3
-        ParticipantSummary clientSummary = new ParticipantSummary(
+        var clientUser = utilisateursClient.getUserById(
+                c.getClientId().toString(), internalToken);
+        var providerUser = utilisateursClient.getUserById(
+                c.getProviderId().toString(), internalToken);
+
+        ClientSummary clientSummary = new ClientSummary(
                 c.getClientId().toString(),
-                "Client", "", "Client", "C"
+                clientUser.fullName(),
+                clientUser.avatarInitial(),
+                false   // isOnline — en attendant la validation du WebSocket (voir backlog #1)
         );
-        ParticipantSummary providerSummary = new ParticipantSummary(
+        ProviderSummary providerSummary = new ProviderSummary(
                 c.getProviderId().toString(),
-                "Prestataire", "", "Prestataire", "P"
+                providerUser.fullName(),
+                providerUser.avatarInitial(),
+                providerUser.rating() != null ? providerUser.rating() : 0.0,
+                providerUser.specialty(),
+                false   // isOnline — en attendant la validation du WebSocket (voir backlog #1)
         );
+
+        LastMessageSummary lastMessage = messageRepository.findLastMessage(c.getId())
+                .filter(m -> !m.isDeleted())
+                .map(m -> new LastMessageSummary(
+                        m.getContent(), m.getSentAt().format(FORMATTER), m.getSenderRole()))
+                .orElse(null);
 
         return new ConversationResponse(
                 c.getId().toString(),
@@ -247,22 +299,24 @@ public class ConversationService {
                 providerSummary,
                 c.getStatus().name().toLowerCase(),
                 unreadCount,
-                null,   // lastMessage — stub S2
+                lastMessage,
                 c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : null,
                 c.getUpdatedAt() != null ? c.getUpdatedAt().format(FORMATTER) : null
         );
     }
 
     private MessageResponse toMessageResponse(Message m, String imageUrl) {
+        boolean deleted = m.isDeleted();
         return new MessageResponse(
                 m.getId().toString(),
                 m.getConversationId().toString(),
                 m.getSenderId().toString(),
                 m.getSenderRole(),
-                m.getContent(),
-                m.getImageId(),
-                imageUrl,
+                deleted ? "Message supprimé" : m.getContent(),
+                deleted ? null : m.getImageId(),
+                deleted ? null : imageUrl,
                 m.isRead(),
+                deleted,
                 m.getSentAt() != null ? m.getSentAt().format(FORMATTER) : null
         );
     }

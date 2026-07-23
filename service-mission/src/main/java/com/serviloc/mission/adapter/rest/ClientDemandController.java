@@ -94,4 +94,11 @@ public class ClientDemandController {
         demandUseCase.rejectQuote(id, clientId, request.getQuoteId());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
+
+    @GetMapping("/demands/{id}/applications")
+    public ResponseEntity<ApiResponse<List<com.serviloc.mission.application.dto.response.ApplicationResponse>>> getApplications(
+            @PathVariable String id) {
+
+        return ResponseEntity.ok(ApiResponse.success(demandUseCase.getApplicationsForDemand(id)));
+    }
 }

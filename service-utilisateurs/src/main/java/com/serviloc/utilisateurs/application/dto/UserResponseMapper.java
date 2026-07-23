@@ -36,6 +36,31 @@ public final class UserResponseMapper {
         );
     }
 
+    // ─── InternalUserResponse (GET /internal/users/{id}) ───────────
+
+    public static ProfileDtos.InternalUserResponse toInternalUserResponse(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile providerProfile) {
+
+        Double rating = providerProfile != null ? providerProfile.getRating() : null;
+        String specialty = providerProfile != null ? providerProfile.getSpecialty() : null;
+
+        return new ProfileDtos.InternalUserResponse(
+                UserIdFormatter.formatUserId(user.getId()),
+                user.getRole().name().toLowerCase(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                rating,
+                specialty,
+                formatDate(user)
+        );
+    }
+
     // ─── Client profile ───────────────────────────────────────────
 
     public static ProfileDtos.ClientProfileResponse toClientProfile(User user) {

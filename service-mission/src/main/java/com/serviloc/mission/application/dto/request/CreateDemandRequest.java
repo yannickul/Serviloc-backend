@@ -19,7 +19,6 @@ public class CreateDemandRequest {
     @NotNull(message = "La localisation est obligatoire")
     @Valid
     private LocationDto location;
-    @JsonProperty("isUrgent")
     private boolean isUrgent;
 
     @NotNull(message = "Le budget estimé est obligatoire")
@@ -34,7 +33,9 @@ public class CreateDemandRequest {
     public void setDescription(String description) { this.description = description; }
     public LocationDto getLocation() { return location; }
     public void setLocation(LocationDto location) { this.location = location; }
+    @JsonProperty("urgent")
     public boolean isUrgent() { return isUrgent; }
+    @JsonProperty("urgent")
     public void setIsUrgent(boolean urgent) { isUrgent = urgent; }
     public BudgetRangeDto getEstimatedBudget() { return estimatedBudget; }
     public void setEstimatedBudget(BudgetRangeDto estimatedBudget) { this.estimatedBudget = estimatedBudget; }

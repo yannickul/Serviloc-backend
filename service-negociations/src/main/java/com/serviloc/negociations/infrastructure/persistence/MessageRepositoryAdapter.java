@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -24,7 +25,13 @@ public class MessageRepositoryAdapter implements MessageRepository {
                 m.getSenderRole(), m.getContent(), m.getImageId()
         );
         entity.setRead(m.isRead());
+        entity.setDeleted(m.isDeleted());
         return toDomain(jpa.save(entity));
+    }
+
+    @Override
+    public Optional<Message> findById(UUID id) {
+        return jpa.findById(id).map(this::toDomain);
     }
 
     @Override
@@ -34,18 +41,24 @@ public class MessageRepositoryAdapter implements MessageRepository {
                 .map(this::toDomain);
     }
 
+    @Override
+    public Optional<Message> findLastMessage(UUID conversationId) {
+        return jpa.findFirstByConversationIdOrderBySentAtDesc(conversationId)
+                .map(this::toDomain);
+    }
+
     private Message toDomain(MessageJpaEntity e) {
         try {
             var ctor = Message.class.getDeclaredConstructor(
                     UUID.class, UUID.class, UUID.class, String.class,
-                    String.class, String.class, boolean.class,
+                    String.class, String.class, boolean.class, boolean.class,
                     java.time.LocalDateTime.class
             );
             ctor.setAccessible(true);
             return ctor.newInstance(
                     e.getId(), e.getConversationId(), e.getSenderId(),
                     e.getSenderRole(), e.getContent(), e.getImageId(),
-                    e.isRead(), e.getSentAt()
+                    e.isRead(), e.isDeleted(), e.getSentAt()
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution Message", ex);

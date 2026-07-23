@@ -1,6 +1,5 @@
 package com.serviloc.utilisateurs.adapter.rest;
 
-import com.serviloc.utilisateurs.application.dto.AuthDtos.UserResponse;
 import com.serviloc.utilisateurs.application.dto.ProfileDtos.ProviderSummary;
 import com.serviloc.utilisateurs.application.dto.UserIdFormatter;
 import com.serviloc.utilisateurs.application.dto.UserResponseMapper;
@@ -47,6 +46,65 @@ public class InternalController {
         this.userJpaRepository = userJpaRepository;
     }
 
+    // ─── GET /internal/providers/top ───────────────────────────────
+
+    @GetMapping("/providers/top")
+    @Operation(summary = "Top prestataires par nombre de missions effectuées")
+    public ResponseEntity<List<com.serviloc.utilisateurs.application.dto.ProfileDtos.TopProviderResponse>> getTopProviders(
+            @RequestParam(defaultValue = "10") int limit) {
+
+        List<ProviderProfile> topProfiles = providerProfileRepository.findTopByCompletedMissions(limit);
+
+        List<com.serviloc.utilisateurs.application.dto.ProfileDtos.TopProviderResponse> result = topProfiles.stream()
+                .map(profile -> {
+                    String fullName = userRepository.findById(profile.getUserId())
+                            .map(User::getFullName)
+                            .orElse("Utilisateur inconnu");
+                    return new com.serviloc.utilisateurs.application.dto.ProfileDtos.TopProviderResponse(
+                            profile.getUserId().toString(),
+                            fullName,
+                            profile.getCompletedMissions(),
+                            profile.getRating()
+                    );
+                })
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    // ─── GET /internal/providers/{id} ───────────────────────────────
+    // Demandé par Service Missions : lookup d'un prestataire précis par id
+    // (GET /internal/providers ne permet qu'une recherche géo-filtrée).
+
+    @GetMapping("/providers/{id}")
+    @Operation(summary = "Profil prestataire par id (lookup précis, hors recherche géo)")
+    public ResponseEntity<com.serviloc.utilisateurs.application.dto.ProfileDtos.ProviderLookupResponse> getProviderById(
+            @PathVariable UUID id) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable : " + id));
+
+        if (user.getRole() != UserRole.PROVIDER) {
+            throw new UserNotFoundException("Prestataire introuvable : " + id);
+        }
+
+        ProviderProfile profile = providerProfileRepository.findByUserId(id)
+                .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable : " + id));
+
+        var response = new com.serviloc.utilisateurs.application.dto.ProfileDtos.ProviderLookupResponse(
+                UserIdFormatter.formatUserId(user.getId()),
+                user.getFullName(),
+                user.getAvatarInitial(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getHourlyRate(),
+                profile.getCompletedMissions(),
+                profile.isAvailable()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
     // ─── GET /internal/providers ──────────────────────────────────
 
     @GetMapping("/providers")
@@ -88,10 +146,15 @@ public class InternalController {
 
     @GetMapping("/users/{id}")
     @Operation(summary = "Profil simplifié d'un utilisateur (inter-services)")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
+    public ResponseEntity<com.serviloc.utilisateurs.application.dto.ProfileDtos.InternalUserResponse> getUserById(@PathVariable UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("Utilisateur introuvable : " + id));
-        return ResponseEntity.ok(UserResponseMapper.toUserResponse(user));
+
+        ProviderProfile providerProfile = user.getRole() == UserRole.PROVIDER
+                ? providerProfileRepository.findByUserId(id).orElse(null)
+                : null;
+
+        return ResponseEntity.ok(UserResponseMapper.toInternalUserResponse(user, providerProfile));
     }
 
     // ─── POST /internal/users/:id/suspend ─────────────────────────

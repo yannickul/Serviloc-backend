@@ -38,6 +38,9 @@ public class MessageJpaEntity {
     @Column(nullable = false)
     private boolean read = false;
 
+    @Column(nullable = false, columnDefinition = "boolean not null default false")
+    private boolean deleted = false;
+
     @CreatedDate
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt;
@@ -62,5 +65,7 @@ public class MessageJpaEntity {
     public String getImageId()          { return imageId; }
     public boolean isRead()             { return read; }
     public void setRead(boolean r)      { this.read = r; }
+    public boolean isDeleted()          { return deleted; }
+    public void setDeleted(boolean d)   { this.deleted = d; }
     public LocalDateTime getSentAt()    { return sentAt; }
 }

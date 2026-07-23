@@ -49,6 +49,12 @@ public class UtilisateurClientFallback implements UtilisateurClient {
     }
 
     @Override
+    public ProviderLookupResponse getProviderById(String id) {
+        log.warn("UtilisateurClient indisponible — getProviderById({}) non résolu", id);
+        return null;
+    }
+
+    @Override
     public void updateRating(String id, UpdateRatingRequest request) {
         log.warn("UtilisateurClient indisponible — updateRating({}) mis en outbox RabbitMQ", id);
     }

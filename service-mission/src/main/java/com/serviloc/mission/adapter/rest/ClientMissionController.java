@@ -5,6 +5,7 @@ import com.serviloc.mission.application.dto.request.CreateLitigeRequest;
 import com.serviloc.mission.application.dto.request.RateMissionRequest;
 import com.serviloc.mission.application.dto.response.ApiResponse;
 import com.serviloc.mission.application.dto.response.MissionResponse;
+import com.serviloc.mission.application.dto.response.PagedResponse;
 import com.serviloc.mission.application.dto.response.ValidateMissionResponse;
 import com.serviloc.mission.application.port.in.MissionUseCase;
 import jakarta.validation.Valid;
@@ -34,11 +35,13 @@ public class ClientMissionController {
     }
 
     @GetMapping("/missions")
-    public ResponseEntity<ApiResponse<List<MissionResponse>>> getMyMissions(
-            @RequestHeader("X-User-Id") String clientId) {
+    public ResponseEntity<PagedResponse<MissionResponse>> getMyMissions(
+            @RequestHeader("X-User-Id") String clientId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit) {
 
-        return ResponseEntity.ok(
-                ApiResponse.success(missionUseCase.getMissionsByClient(clientId)));
+        return ResponseEntity.ok(missionUseCase.getMissionsByClient(clientId, status, page, limit));
     }
 
     @PostMapping("/missions/{id}/validate")

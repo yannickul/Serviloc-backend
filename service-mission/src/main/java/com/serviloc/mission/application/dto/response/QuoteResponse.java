@@ -5,6 +5,7 @@ import java.util.List;
 
 public class QuoteResponse {
     private String id;
+    private String reference;
     private String demandId;
     private String providerId;
     private String clientId;
@@ -21,6 +22,8 @@ public class QuoteResponse {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getReference() { return reference; }
+    public void setReference(String reference) { this.reference = reference; }
     public String getDemandId() { return demandId; }
     public void setDemandId(String demandId) { this.demandId = demandId; }
     public String getProviderId() { return providerId; }
@@ -50,21 +53,21 @@ public class QuoteResponse {
 
     public static class MaterialResponse {
         private String id;
-        private String name;
+        private String designation;
         private int quantity;
         private BigDecimal unitPrice;
         private BigDecimal subtotal;
 
-        public MaterialResponse(String id, String name, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {
+        public MaterialResponse(String id, String designation, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {
             this.id = id;
-            this.name = name;
+            this.designation = designation;
             this.quantity = quantity;
             this.unitPrice = unitPrice;
             this.subtotal = subtotal;
         }
 
         public String getId() { return id; }
-        public String getName() { return name; }
+        public String getDesignation() { return designation; }
         public int getQuantity() { return quantity; }
         public BigDecimal getUnitPrice() { return unitPrice; }
         public BigDecimal getSubtotal() { return subtotal; }

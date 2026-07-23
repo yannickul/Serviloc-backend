@@ -23,6 +23,9 @@ public interface UtilisateurClient {
     @GetMapping("/internal/users/{id}")
     UserSummary getUserById(@PathVariable String id);
 
+    @GetMapping("/internal/providers/{id}")
+    ProviderLookupResponse getProviderById(@PathVariable String id);
+
     @PutMapping("/internal/users/{id}/rating")
     void updateRating(@PathVariable String id, @RequestBody UpdateRatingRequest request);
 

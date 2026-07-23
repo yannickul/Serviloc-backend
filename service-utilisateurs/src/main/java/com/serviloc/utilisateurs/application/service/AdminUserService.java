@@ -85,13 +85,13 @@ public class AdminUserService {
 
         eventPublisher.publishUserSuspended(userId, user.getEmail());
 
-        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={}",
-                userId, request.duration());
+        String duration = request.durationOrDefault();
+        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={}", userId, duration);
 
         return new SuspendResponse(
                 userId.toString(),
                 "suspended",
-                request.duration(),
+                duration,
                 request.reason()
         );
     }

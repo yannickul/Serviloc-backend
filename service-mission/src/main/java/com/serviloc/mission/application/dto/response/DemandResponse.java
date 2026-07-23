@@ -1,5 +1,7 @@
 package com.serviloc.mission.application.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.serviloc.mission.application.dto.request.BudgetRangeDto;
 import com.serviloc.mission.application.dto.request.LocationDto;
 import java.time.Instant;
@@ -36,7 +38,9 @@ public class DemandResponse {
     public void setLocation(LocationDto location) { this.location = location; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    @JsonProperty("urgent")
     public boolean isUrgent() { return isUrgent; }
+    @JsonProperty("urgent")
     public void setIsUrgent(boolean urgent) { isUrgent = urgent; }
     public BudgetRangeDto getEstimatedBudget() { return estimatedBudget; }
     public void setEstimatedBudget(BudgetRangeDto estimatedBudget) { this.estimatedBudget = estimatedBudget; }

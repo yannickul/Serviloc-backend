@@ -26,8 +26,8 @@ public final class NegociationDtos {
     public record ConversationResponse(
             String id,
             String demandId,
-            ParticipantSummary client,
-            ParticipantSummary provider,
+            ClientSummary client,
+            ProviderSummary provider,
             String status,
             int unreadCount,
             LastMessageSummary lastMessage,
@@ -35,12 +35,20 @@ public final class NegociationDtos {
             String updatedAt
     ) {}
 
-    public record ParticipantSummary(
+    public record ClientSummary(
             String id,
-            String firstName,
-            String lastName,
             String fullName,
-            String avatarInitial
+            String avatarInitial,
+            boolean isOnline
+    ) {}
+
+    public record ProviderSummary(
+            String id,
+            String fullName,
+            String avatarInitial,
+            double rating,
+            String specialty,
+            boolean isOnline
     ) {}
 
     public record LastMessageSummary(
@@ -58,12 +66,13 @@ public final class NegociationDtos {
             String imageId,
             String imageUrl,
             boolean read,
+            boolean deleted,
             String sentAt
     ) {}
 
-    public record ConversationListResponse(
-            List<ConversationResponse> conversations,
-            PageMeta meta
+    public record DeleteMessageResponse(
+            String messageId,
+            boolean deleted
     ) {}
 
     public record MessageListResponse(

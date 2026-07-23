@@ -84,6 +84,52 @@ public final class ProfileDtos {
             String createdAt
     ) {}
 
+    // ─── InternalUserResponse (GET /internal/users/{id}) ───────────
+    // Découplé de AuthDtos.UserResponse : cet endpoint est interne
+    // (inter-services) et ne doit pas partager son contrat avec les
+    // réponses publiques /auth/login, /auth/refresh, etc. rating/specialty
+    // sont null pour un client, renseignés pour un prestataire.
+
+    public record InternalUserResponse(
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String status,
+            Double rating,
+            String specialty,
+            String createdAt
+    ) {}
+
+    // ─── ProviderLookupResponse (GET /internal/providers/:providerId) ──
+    // Demandé par Service Missions : lookup par id précis (pas de filtre
+    // géo). avatarInitial exposé directement (cf. échange sur la question
+    // annexe) pour éviter toute divergence de logique de calcul entre services.
+
+    public record ProviderLookupResponse(
+            String id,
+            String fullName,
+            String avatarInitial,
+            String specialty,
+            double rating,
+            double hourlyRate,
+            int completedMissions,
+            boolean isAvailable
+    ) {}
+
+    // ─── TopProviderResponse (GET /internal/providers/top) ─────────
+
+    public record TopProviderResponse(
+            String id,
+            String fullName,
+            int completedMissions,
+            double rating
+    ) {}
+
     // ─── AgentReview (enrichissement dossier prestataire, cf. divergence front) ───
 
     public record AgentReview(
