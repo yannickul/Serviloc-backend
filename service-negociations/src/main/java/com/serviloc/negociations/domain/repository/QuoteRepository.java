@@ -10,5 +10,7 @@ public interface QuoteRepository {
     Quote save(Quote quote);
     Optional<Quote> findById(UUID id);
     Optional<Quote> findByDemandId(UUID demandId);
+    Optional<Quote> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
+    List<Quote> findAllByDemandId(UUID demandId);
     List<Quote> findExpiredPending();
 }

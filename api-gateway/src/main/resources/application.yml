@@ -24,6 +24,11 @@ spring:
 
       routes:
 
+        # NOTE : GET /v1/client/dashboard, /v1/provider/dashboard, /v1/admin/dashboard
+        # et /v1/admin/stats ne sont PLUS proxifiés ici : ils sont servis localement par
+        # DashboardAggregatorController (le Gateway agrège plusieurs microservices en un
+        # seul appel). Sécurité JWT/rôle assurée par DashboardAuthWebFilter.
+
         # ── Service Utilisateurs ──────────────────────────────────
         - id: utilisateurs-auth
           uri: lb://service-utilisateurs
@@ -35,7 +40,7 @@ spring:
         - id: utilisateurs-client
           uri: lb://service-utilisateurs
           predicates:
-            - Path=/v1/client/me
+            - Path=/v1/client/me, /v1/client/profile
           filters:
             - StripPrefix=1
             - JwtAuthFilter
@@ -77,11 +82,28 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@roleKeyResolver}"
 
+        # GET /v1/user/{id} : profil simplifié, accessible à tout rôle authentifié
+        # (chemin sans préfixe /client, /provider, /admin, /agent → RoleAuthFilter
+        # laisse passer sans vérification de rôle, seul JwtAuthFilter s'applique).
+        - id: utilisateurs-user
+          uri: lb://service-utilisateurs
+          predicates:
+            - Path=/v1/user/{id}
+          filters:
+            - StripPrefix=1
+            - JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@roleKeyResolver}"
+
         # ── Service Missions ──────────────────────────────────────
         - id: missions-client
           uri: lb://service-missions
           predicates:
-            - Path=/v1/client/demands/**, /v1/client/missions/**, /v1/client/providers/search, /v1/client/dashboard
+            - Path=/v1/client/demands/**, /v1/client/missions/**, /v1/client/providers/search
           filters:
             - StripPrefix=1
             - JwtAuthFilter
@@ -96,7 +118,7 @@ spring:
         - id: missions-provider
           uri: lb://service-missions
           predicates:
-            - Path=/v1/provider/demands/**, /v1/provider/missions/**, /v1/provider/dashboard
+            - Path=/v1/provider/demands/**, /v1/provider/missions/**
           filters:
             - StripPrefix=1
             - JwtAuthFilter
@@ -108,20 +130,14 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@roleKeyResolver}"
 
-        - id: missions-admin
-          uri: lb://service-missions
-          predicates:
-            - Path=/v1/admin/dashboard, /v1/admin/stats, /v1/admin/transactions/**
-          filters:
-            - StripPrefix=1
-            - JwtAuthFilter
-            - RoleAuthFilter
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 50
-                redis-rate-limiter.burstCapacity: 100
-                redis-rate-limiter.requestedTokens: 1
-                key-resolver: "#{@roleKeyResolver}"
+        # NOTE : l'ancienne route "missions-admin" (Path=/v1/admin/dashboard, /v1/admin/stats,
+        # /v1/admin/transactions/**) a été supprimée. /v1/admin/dashboard et /v1/admin/stats
+        # sont désormais servis par DashboardAggregatorController ; /v1/admin/transactions/**
+        # est déjà couvert par la route "paiement-admin" ci-dessous (vers service-paiement,
+        # le service qui implémente réellement AdminPaymentController#getTransactions).
+        # La route "missions-admin" faisait doublon sur ce dernier chemin et, comme les routes
+        # sans "order" explicite sont évaluées dans l'ordre de déclaration, elle l'emportait
+        # sur "paiement-admin" et envoyait /admin/transactions vers le mauvais service.
 
         # ── Service Négociations ───────────────────────────────────
         - id: negociations-client
@@ -169,6 +185,20 @@ spring:
                 redis-rate-limiter.burstCapacity: 100
                 redis-rate-limiter.requestedTokens: 1
                 key-resolver: "#{@roleKeyResolver}"
+
+        # ── WebSocket STOMP (chat temps réel) ──────────────────────
+        # Pas de préfixe /v1 sur ce chemin → StripPrefix=0. Pas de RoleAuthFilter
+        # (chat multi-rôles) ni de RequestRateLimiter (connexion persistante, pas
+        # une suite de requêtes REST). Le token est passé en ?token= car l'API
+        # WebSocket native des navigateurs ne permet pas de header Authorization
+        # custom au handshake — voir le fallback ajouté dans JwtAuthFilter.
+        - id: negociations-ws
+          uri: lb://service-negociations
+          predicates:
+            - Path=/ws/**
+          filters:
+            - StripPrefix=0
+            - JwtAuthFilter
 
         # ── Service Litiges ───────────────────────────────────────
         - id: litiges-admin
@@ -354,6 +384,12 @@ eureka:
 jwt:
   secret: ${JWT_SECRET}
   issuer: serviloc
+
+internal:
+  token: ${INTERNAL_TOKEN}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 rate-limiting:
   replenish-rate: 10

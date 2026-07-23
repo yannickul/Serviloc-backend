@@ -43,6 +43,9 @@ public class QuoteJpaEntity {
     @Column(name = "estimated_duration_hours")
     private int estimatedDurationHours;
 
+    @Column(name = "validity_days", nullable = false)
+    private int validityDays;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private QuoteStatus status;
@@ -62,7 +65,7 @@ public class QuoteJpaEntity {
 
     public QuoteJpaEntity(UUID id, UUID conversationId, UUID demandId,
                           UUID providerId, double amount, String description,
-                          int estimatedDurationHours, QuoteStatus status,
+                          int estimatedDurationHours, int validityDays, QuoteStatus status,
                           LocalDateTime expiresAt) {
         this.id = id;
         this.conversationId = conversationId;
@@ -71,6 +74,7 @@ public class QuoteJpaEntity {
         this.amount = amount;
         this.description = description;
         this.estimatedDurationHours = estimatedDurationHours;
+        this.validityDays = validityDays;
         this.status = status;
         this.expiresAt = expiresAt;
     }
@@ -84,6 +88,7 @@ public class QuoteJpaEntity {
     public String getMaterialsJson()         { return materialsJson; }
     public void setMaterialsJson(String j)   { this.materialsJson = j; }
     public int getEstimatedDurationHours()   { return estimatedDurationHours; }
+    public int getValidityDays()             { return validityDays; }
     public QuoteStatus getStatus()           { return status; }
     public void setStatus(QuoteStatus s)     { this.status = s; }
     public LocalDateTime getExpiresAt()      { return expiresAt; }

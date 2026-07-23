@@ -34,7 +34,7 @@ public class ConversationJpaEntity {
     @Column(name = "provider_id", nullable = false, columnDefinition = "uuid")
     private UUID providerId;
 
-    @Column(name = "demand_id", nullable = false, columnDefinition = "uuid")
+    @Column(name = "demand_id", columnDefinition = "uuid")
     private UUID demandId;
 
     @Enumerated(EnumType.STRING)

@@ -3,6 +3,7 @@ package com.serviloc.paiement.application.service;
 import com.serviloc.paiement.domain.model.*;
 import com.serviloc.paiement.domain.repository.*;
 import com.serviloc.paiement.infrastructure.external.MobileMoneyClient;
+import com.serviloc.paiement.infrastructure.external.UserResolver;
 import com.serviloc.paiement.infrastructure.messaging.PaymentEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,8 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -27,6 +29,7 @@ public class PaymentService {
     private final CommissionConfigRepository commissionConfigRepository;
     private final MobileMoneyClient mobileMoneyClient;
     private final PaymentEventPublisher eventPublisher;
+    private final UserResolver userResolver;
 
     @Value("${payment.commission.standard-rate:10.0}")
     private double defaultStandardRate;
@@ -35,12 +38,14 @@ public class PaymentService {
                           PayoutRepository payoutRepository,
                           CommissionConfigRepository commissionConfigRepository,
                           MobileMoneyClient mobileMoneyClient,
-                          PaymentEventPublisher eventPublisher) {
+                          PaymentEventPublisher eventPublisher,
+                          UserResolver userResolver) {
         this.transactionRepository = transactionRepository;
         this.payoutRepository = payoutRepository;
         this.commissionConfigRepository = commissionConfigRepository;
         this.mobileMoneyClient = mobileMoneyClient;
         this.eventPublisher = eventPublisher;
+        this.userResolver = userResolver;
     }
 
     // ─── Consumer: negotiation.quote_accepted ─────────────────────
@@ -93,7 +98,7 @@ public class PaymentService {
 
     // ─── Consumer: mission.completed ──────────────────────────────
 
-    public void releaseFunds(UUID transactionId) {
+    public void releaseFunds(UUID transactionId, String missionIdRaw) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Transaction introuvable : " + transactionId));
@@ -105,21 +110,27 @@ public class PaymentService {
             return;
         }
 
+        UUID missionId = parseUuidOrNull(missionIdRaw);
+        if (missionId != null) {
+            transaction.assignMission(missionId);
+        }
+
         transaction.release();
         transactionRepository.save(transaction);
 
         // Crée le Payout pour le prestataire
         Payout payout = Payout.create(
-                transactionId, transaction.getProviderId(),
-                transaction.getNetAmount(), transaction.getCommissionAmount()
+                transactionId, missionId, transaction.getProviderId(),
+                transaction.getAmount(), transaction.getCommissionAmount(),
+                transaction.getNetAmount()
         );
         payoutRepository.save(payout);
 
-        log.info("[PAYMENT] Fonds libérés : transactionId={} netAmount={}",
-                transactionId, transaction.getNetAmount());
+        log.info("[PAYMENT] Fonds libérés : transactionId={} missionId={} netAmount={}",
+                transactionId, missionId, transaction.getNetAmount());
 
         eventPublisher.publishPaymentReleased(
-                transactionId, transaction.getProviderId(),
+                transactionId, missionId, transaction.getProviderId(),
                 transaction.getNetAmount(), transaction.getCommissionAmount()
         );
     }
@@ -165,6 +176,9 @@ public class PaymentService {
             transaction.refund();
             transactionRepository.save(transaction);
             log.info("[PAYMENT] Remboursement effectué : transactionId={}", transactionId);
+            eventPublisher.publishPaymentRefunded(
+                    transactionId, transaction.getClientId(), refundAmount
+            );
         } else {
             throw new IllegalStateException("Remboursement échoué : " + result.message());
         }
@@ -180,7 +194,8 @@ public class PaymentService {
         transaction.freeze();
         return transactionRepository.save(transaction);
     }
-// ─── GET /provider/earnings ───────────────────────────────────
+
+    // ─── GET /provider/earnings ───────────────────────────────────
 
     @Transactional(readOnly = true)
     public ProviderEarnings getProviderEarnings(UUID providerId, int page,
@@ -210,7 +225,7 @@ public class PaymentService {
         return new ProviderEarnings(monthlyTotal, payouts);
     }
 
-// ─── DTO interne ──────────────────────────────────────────────
+    // ─── DTO interne ──────────────────────────────────────────────
 
     public record ProviderEarnings(
             double monthlyTotal,
@@ -220,12 +235,11 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public FinancialStats getFinancialStats(LocalDateTime from, LocalDateTime to) {
-        double totalRevenue = transactionRepository.sumCommissionBetween(from, to);
-        long totalSequestre = transactionRepository.countByStatus(TransactionStatus.SEQUESTRE);
-        long totalLibere    = transactionRepository.countByStatus(TransactionStatus.LIBERE);
-        long totalEchec     = transactionRepository.countByStatus(TransactionStatus.ECHEC);
+        double totalRevenue      = transactionRepository.sumCommissionBetween(from, to);
+        double commissionEarned  = transactionRepository.sumCommissionAmountBetween(from, to);
+        double sequesteredAmount = transactionRepository.sumSequesteredAmountBetween(from, to);
 
-        return new FinancialStats(totalRevenue, totalSequestre, totalLibere, totalEchec);
+        return new FinancialStats(totalRevenue, commissionEarned, sequesteredAmount);
     }
 
     // ─── GET /admin/transactions ──────────────────────────────────
@@ -234,6 +248,68 @@ public class PaymentService {
     public Page<Transaction> getTransactions(TransactionStatus status,
                                              int page, int limit) {
         return transactionRepository.findByStatus(status, PageRequest.of(page - 1, limit));
+    }
+
+    // ─── GET /admin/stats & GET /internal/stats/admin-full ────────
+
+    @Transactional(readOnly = true)
+    public AdminStats getAdminStats(LocalDateTime from, LocalDateTime to) {
+        List<Payout> payouts = payoutRepository.findAllByCreatedAtBetween(from, to);
+        List<Transaction> transactions = transactionRepository.findAllByCreatedAtBetween(from, to);
+
+        DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        List<CommissionStat> commissions = payouts.stream().map(p -> new CommissionStat(
+                p.getId().toString(),
+                p.getReference(),
+                userResolver.resolveFullName(p.getProviderId()),
+                p.getAmount(),
+                p.getAmount() != 0 ? (p.getCommissionAmount() / p.getAmount()) * 100 : 0,
+                p.getCommissionAmount(),
+                p.getCreatedAt() != null ? p.getCreatedAt().format(dateFmt) : null
+        )).toList();
+
+        List<PaymentStat> payments = transactions.stream().map(t -> new PaymentStat(
+                t.getId().toString(),
+                t.getReference(),
+                mapTransactionType(t.getStatus()),
+                userResolver.resolveFullName(t.getClientId()),
+                userResolver.resolveFullName(t.getProviderId()),
+                t.getAmount(),
+                mapTransactionDisplayStatus(t.getStatus()),
+                t.getCreatedAt() != null ? t.getCreatedAt().format(dateFmt) : null
+        )).toList();
+
+        return new AdminStats(commissions, payments);
+    }
+
+    /**
+     * Mapping type paiement|sequestre|remboursement à partir de TransactionStatus.
+     * NB : le contrat frontend ne prévoit que 3 valeurs de "type" et 3 de "status"
+     * (debloque|sequestre|rembourse) alors que TransactionStatus en a 6
+     * (PENDING, SEQUESTRE, LIBERE, REMBOURSE, LITIGE, ECHEC). Choix retenus en
+     * attendant une mise à jour du contrat :
+     *   PENDING  → paiement   / sequestre (en cours, fonds pas encore confirmés)
+     *   SEQUESTRE→ sequestre  / sequestre
+     *   LIBERE   → paiement   / debloque
+     *   REMBOURSE→ remboursement / rembourse
+     *   LITIGE   → sequestre  / sequestre (gelé = toujours retenu)
+     *   ECHEC    → paiement   / sequestre (fallback, aucun équivalent réel)
+     */
+    private String mapTransactionType(TransactionStatus status) {
+        return switch (status) {
+            case SEQUESTRE, LITIGE -> "sequestre";
+            case REMBOURSE -> "remboursement";
+            default -> "paiement";
+        };
+    }
+
+    private String mapTransactionDisplayStatus(TransactionStatus status) {
+        return switch (status) {
+            case LIBERE -> "debloque";
+            case REMBOURSE -> "rembourse";
+            default -> "sequestre";
+        };
     }
 
     // ─── PATCH /admin/settings/commission ────────────────────────
@@ -245,6 +321,20 @@ public class PaymentService {
         return commissionConfigRepository.save(config);
     }
 
+    // ─── GET /internal/transactions/client/:clientId/pending ──────
+
+    @Transactional(readOnly = true)
+    public List<Transaction> getPendingTransactionsByClient(UUID clientId) {
+        return transactionRepository.findByClientIdAndStatus(
+                clientId, TransactionStatus.SEQUESTRE);
+    }
+
+    @Transactional(readOnly = true)
+    public double getTotalSpentByClient(UUID clientId) {
+        return transactionRepository.sumAmountByClientIdAndStatus(
+                clientId, TransactionStatus.LIBERE);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────
 
     private double getCommissionRate() {
@@ -253,12 +343,47 @@ public class PaymentService {
                 .orElse(defaultStandardRate);
     }
 
-    // ─── DTO interne ──────────────────────────────────────────────
+    private UUID parseUuidOrNull(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return UUID.fromString(raw);
+        } catch (IllegalArgumentException e) {
+            log.warn("[PAYMENT] missionId non parsable en UUID : {}", raw);
+            return null;
+        }
+    }
+
+    // ─── DTOs internes ──────────────────────────────────────────────
 
     public record FinancialStats(
             double totalRevenue,
-            long totalSequestre,
-            long totalLibere,
-            long totalEchec
+            double commissionEarned,
+            double sequesteredAmount
+    ) {}
+
+    public record CommissionStat(
+            String id,
+            String reference,
+            String providerName,
+            double amount,
+            double commissionRate,
+            double commissionAmount,
+            String date
+    ) {}
+
+    public record PaymentStat(
+            String id,
+            String reference,
+            String type,
+            String clientName,
+            String providerName,
+            double amount,
+            String status,
+            String date
+    ) {}
+
+    public record AdminStats(
+            List<CommissionStat> commissions,
+            List<PaymentStat> payments
     ) {}
 }

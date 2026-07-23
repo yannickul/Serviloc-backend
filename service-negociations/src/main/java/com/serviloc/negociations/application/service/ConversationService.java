@@ -7,15 +7,21 @@ import com.serviloc.negociations.domain.model.Quote;
 import com.serviloc.negociations.domain.repository.ConversationRepository;
 import com.serviloc.negociations.domain.repository.MessageRepository;
 import com.serviloc.negociations.domain.repository.QuoteRepository;
+import com.serviloc.negociations.infrastructure.external.FichiersClient;
+import com.serviloc.negociations.infrastructure.external.UtilisateursClient;
 import com.serviloc.negociations.infrastructure.messaging.NegociationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,15 +36,27 @@ public class ConversationService {
     private final MessageRepository messageRepository;
     private final QuoteRepository quoteRepository;
     private final NegociationEventPublisher eventPublisher;
+    private final FichiersClient fichiersClient;
+    private final UtilisateursClient utilisateursClient;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    @Value("${internal.token}")
+    private String internalToken;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
                                QuoteRepository quoteRepository,
-                               NegociationEventPublisher eventPublisher) {
+                               NegociationEventPublisher eventPublisher,
+                               FichiersClient fichiersClient,
+                               UtilisateursClient utilisateursClient,
+                               SimpMessagingTemplate messagingTemplate) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.quoteRepository = quoteRepository;
         this.eventPublisher = eventPublisher;
+        this.fichiersClient = fichiersClient;
+        this.utilisateursClient = utilisateursClient;
+        this.messagingTemplate = messagingTemplate;
     }
 
     // ─── POST /client/conversations ───────────────────────────────
@@ -46,7 +64,9 @@ public class ConversationService {
     public ConversationResponse createConversation(UUID clientId,
                                                    CreateConversationRequest request) {
         UUID providerId = UUID.fromString(request.providerId());
-        UUID demandId   = UUID.fromString(request.demandId());
+        UUID demandId   = request.demandId() != null
+                ? UUID.fromString(request.demandId())
+                : null;
 
         // Idempotence — retourne la conversation existante si elle existe
         return conversationRepository
@@ -68,35 +88,29 @@ public class ConversationService {
     // ─── GET /client/conversations ────────────────────────────────
 
     @Transactional(readOnly = true)
-    public ConversationListResponse getClientConversations(UUID clientId,
-                                                           int page, int limit) {
-        PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<Conversation> result = conversationRepository
-                .findByClientIdOrderByLastMessageAtDesc(clientId, pageable);
+    public List<ConversationResponse> getClientConversations(UUID clientId) {
+        List<Conversation> conversations = conversationRepository
+                .findByClientIdOrderByLastMessageAtDesc(clientId,
+                        org.springframework.data.domain.Pageable.unpaged())
+                .getContent();
 
-        return new ConversationListResponse(
-                result.getContent().stream()
-                        .map(c -> toConversationResponse(c, clientId))
-                        .toList(),
-                new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
-        );
+        return conversations.stream()
+                .map(c -> toConversationResponse(c, clientId))
+                .toList();
     }
 
     // ─── GET /provider/conversations ──────────────────────────────
 
     @Transactional(readOnly = true)
-    public ConversationListResponse getProviderConversations(UUID providerId,
-                                                             int page, int limit) {
-        PageRequest pageable = PageRequest.of(page - 1, limit);
-        Page<Conversation> result = conversationRepository
-                .findByProviderIdOrderByLastMessageAtDesc(providerId, pageable);
+    public List<ConversationResponse> getProviderConversations(UUID providerId) {
+        List<Conversation> conversations = conversationRepository
+                .findByProviderIdOrderByLastMessageAtDesc(providerId,
+                        org.springframework.data.domain.Pageable.unpaged())
+                .getContent();
 
-        return new ConversationListResponse(
-                result.getContent().stream()
-                        .map(c -> toConversationResponse(c, providerId))
-                        .toList(),
-                new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
-        );
+        return conversations.stream()
+                .map(c -> toConversationResponse(c, providerId))
+                .toList();
     }
 
     // ─── GET /client|provider/conversations/:id/messages ──────────
@@ -117,8 +131,22 @@ public class ConversationService {
         Page<Message> result = messageRepository
                 .findByConversationIdOrderBySentAtDesc(conversationId, pageable);
 
+        // Résolution des imageUrl en un seul appel batch (évite le N+1 vers service-fichiers)
+        List<String> imageIds = result.getContent().stream()
+                .map(Message::getImageId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        Map<String, String> urlsById = imageIds.isEmpty()
+                ? Map.of()
+                : fichiersClient.batchUrls(
+                        new FichiersClient.BatchUrlsRequest(imageIds), internalToken)
+                    .data().urls();
+
         return new MessageListResponse(
-                result.getContent().stream().map(this::toMessageResponse).toList(),
+                result.getContent().stream()
+                        .map(m -> toMessageResponse(m, urlsById.get(m.getImageId())))
+                        .toList(),
                 new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
         );
     }
@@ -153,7 +181,56 @@ public class ConversationService {
         );
 
         log.info("[NEGO] Message envoyé : convId={} senderRole={}", conversationId, senderRole);
-        return toMessageResponse(saved);
+
+        String imageUrl = null;
+        if (saved.getImageId() != null && !saved.getImageId().isBlank()) {
+            imageUrl = fichiersClient.getUrl(saved.getImageId(), internalToken).data().url();
+        }
+        MessageResponse response = toMessageResponse(saved, imageUrl);
+
+        // Diffusion temps réel — /topic/conversation.{id} (relais RabbitMQ STOMP)
+        messagingTemplate.convertAndSend(
+                "/topic/conversation." + conversationId, response);
+
+        return response;
+    }
+
+    // ─── DELETE /client|provider/conversations/:id/messages/:messageId ───
+
+    public DeleteMessageResponse deleteMessage(UUID conversationId, UUID messageId,
+                                               UUID requesterId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation introuvable"));
+
+        if (!conv.getClientId().equals(requesterId) &&
+                !conv.getProviderId().equals(requesterId)) {
+            throw new IllegalStateException("Accès non autorisé à cette conversation");
+        }
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message introuvable"));
+
+        if (!message.getConversationId().equals(conversationId)) {
+            throw new IllegalArgumentException(
+                    "Ce message n'appartient pas à cette conversation");
+        }
+
+        // Seul l'auteur du message peut le supprimer
+        if (!message.getSenderId().equals(requesterId)) {
+            throw new IllegalStateException("Seul l'auteur du message peut le supprimer");
+        }
+
+        message.softDelete();
+        messageRepository.save(message);
+        log.info("[NEGO] Message supprimé (soft-delete) : id={} convId={}",
+                messageId, conversationId);
+
+        // Diffusion temps réel — l'autre participant voit le message masqué en direct
+        messagingTemplate.convertAndSend(
+                "/topic/conversation." + conversationId,
+                toMessageResponse(message, null));
+
+        return new DeleteMessageResponse(messageId.toString(), true);
     }
 
     // ─── GET /internal/quotes/:quoteId ────────────────────────────
@@ -189,52 +266,91 @@ public class ConversationService {
                 ? c.getUnreadCountClient()
                 : c.getUnreadCountProvider();
 
-        // Stub participants — sera enrichi avec Feign Utilisateurs en S3
-        ParticipantSummary clientSummary = new ParticipantSummary(
-                "usr_" + c.getClientId().toString().replace("-", "").substring(0, 8),
-                "Client", "", "Client", "C"
+        var clientUser = utilisateursClient.getUserById(
+                c.getClientId().toString(), internalToken);
+        var providerUser = utilisateursClient.getUserById(
+                c.getProviderId().toString(), internalToken);
+
+        ClientSummary clientSummary = new ClientSummary(
+                c.getClientId().toString(),
+                clientUser.fullName(),
+                clientUser.avatarInitial(),
+                false   // isOnline — en attendant la validation du WebSocket (voir backlog #1)
         );
-        ParticipantSummary providerSummary = new ParticipantSummary(
-                "usr_" + c.getProviderId().toString().replace("-", "").substring(0, 8),
-                "Prestataire", "", "Prestataire", "P"
+        ProviderSummary providerSummary = new ProviderSummary(
+                c.getProviderId().toString(),
+                providerUser.fullName(),
+                providerUser.avatarInitial(),
+                providerUser.rating() != null ? providerUser.rating() : 0.0,
+                providerUser.specialty(),
+                false   // isOnline — en attendant la validation du WebSocket (voir backlog #1)
         );
+
+        LastMessageSummary lastMessage = messageRepository.findLastMessage(c.getId())
+                .filter(m -> !m.isDeleted())
+                .map(m -> new LastMessageSummary(
+                        m.getContent(), m.getSentAt().format(FORMATTER), m.getSenderRole()))
+                .orElse(null);
 
         return new ConversationResponse(
                 c.getId().toString(),
-                c.getDemandId().toString(),
+                c.getDemandId() != null ? c.getDemandId().toString() : null,
                 clientSummary,
                 providerSummary,
                 c.getStatus().name().toLowerCase(),
                 unreadCount,
-                null,   // lastMessage — stub S2
+                lastMessage,
                 c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : null,
                 c.getUpdatedAt() != null ? c.getUpdatedAt().format(FORMATTER) : null
         );
     }
 
-    private MessageResponse toMessageResponse(Message m) {
+    private MessageResponse toMessageResponse(Message m, String imageUrl) {
+        boolean deleted = m.isDeleted();
         return new MessageResponse(
                 m.getId().toString(),
                 m.getConversationId().toString(),
                 m.getSenderId().toString(),
                 m.getSenderRole(),
-                m.getContent(),
-                m.getImageId(),
+                deleted ? "Message supprimé" : m.getContent(),
+                deleted ? null : m.getImageId(),
+                deleted ? null : imageUrl,
                 m.isRead(),
+                deleted,
                 m.getSentAt() != null ? m.getSentAt().format(FORMATTER) : null
         );
     }
 
     private QuoteResponse toQuoteResponse(Quote q) {
+        List<MaterialResponse> materials = q.getMaterials() != null
+                ? q.getMaterials().stream()
+                    .map(m -> new MaterialResponse(
+                            m.id().toString(), m.name(), m.quantity(),
+                            m.unitPrice(), m.subtotal()))
+                    .toList()
+                : List.of();
+        double materialsTotal = materials.stream().mapToDouble(MaterialResponse::subtotal).sum();
+
+        UUID clientId = conversationRepository.findById(q.getConversationId())
+                .map(Conversation::getClientId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Conversation introuvable : " + q.getConversationId()));
+
         return new QuoteResponse(
                 q.getId().toString(),
                 q.getDemandId().toString(),
                 q.getProviderId().toString(),
-                q.getAmount(),
+                clientId.toString(),
                 q.getDescription(),
+                q.getAmount(),
+                materials,
+                materialsTotal,
+                q.getAmount() + materialsTotal,
+                q.getEstimatedDurationHours(),
+                q.getValidityDays(),
                 q.getStatus().name().toLowerCase(),
-                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null,
-                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null
+                q.getCreatedAt() != null ? q.getCreatedAt().format(FORMATTER) : null,
+                q.getExpiresAt() != null ? q.getExpiresAt().format(FORMATTER) : null
         );
     }
 }

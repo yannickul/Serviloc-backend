@@ -1,6 +1,12 @@
 server:
   port: 8084
 
+campay:
+  username: ${CAMPAY_USERNAME}
+  password: ${CAMPAY_PASSWORD}
+  env: ${CAMPAY_ENV:DEV}
+  base-url: https://demo.campay.net/api
+
 spring:
   application:
     name: service-paiement
@@ -48,6 +54,14 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         waitDurationInOpenState: 30s
         failureRateThreshold: 50
+      userService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 15s
+        failureRateThreshold: 50
   retry:
     instances:
       mobileMoney:
@@ -74,6 +88,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+internal:
+  token: ${INTERNAL_TOKEN}
 
 springdoc:
   swagger-ui:

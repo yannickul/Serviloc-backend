@@ -23,11 +23,12 @@ public class UserEventPublisher {
 
     // ─── user.registered ─────────────────────────────────────────
 
-    public void publishUserRegistered(UUID userId, String email, String role) {
+    public void publishUserRegistered(UUID userId, String email, String role, String otpCode) {
         publish(RabbitMQConfig.RK_USER_REGISTERED, Map.of(
-                "userId", userId.toString(),
-                "email",  email,
-                "role",   role
+                "userId",  userId.toString(),
+                "email",   email,
+                "role",    role,
+                "otpCode", otpCode != null ? otpCode : ""
         ));
     }
 
@@ -42,10 +43,11 @@ public class UserEventPublisher {
 
     // ─── provider.rejected ────────────────────────────────────────
 
-    public void publishProviderRejected(UUID providerId, String reason) {
+    public void publishProviderRejected(UUID providerId, String reason, String email) {
         publish(RabbitMQConfig.RK_PROVIDER_REJECTED, Map.of(
                 "providerId", providerId.toString(),
-                "reason",     reason
+                "reason",     reason,
+                "email",      email
         ));
     }
 
@@ -94,14 +96,18 @@ public class UserEventPublisher {
                 "agentId",      agentId.toString(),
                 "email",        email,
                 "agentCode",    agentCode,
-                "tempPassword", tempPassword
+                "provisionalPassword", tempPassword
         ));
     }
-    // ─── provider.review_submitted ────────────────────────────────
+    // ─── provider.reviewed ─────────────────────────────────────────
+    // Fix : la routing key était "provider.review_submitted", absente du
+    // catalogue du contrat Notifications (qui attend "provider.reviewed").
+    // Le message était bien routé (wildcard provider.*) mais très probablement
+    // ignoré par le consumer faute de handler pour ce type exact.
 
     public void publishProviderReviewSubmitted(UUID agentId, UUID providerId,
                                                String verdict) {
-        publish("provider.review_submitted", Map.of(
+        publish("provider.reviewed", Map.of(
                 "agentId",    agentId.toString(),
                 "providerId", providerId.toString(),
                 "verdict",    verdict

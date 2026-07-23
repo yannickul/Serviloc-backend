@@ -41,6 +41,7 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
         entity.setCertificationsJson(toJson(profile.getCertifications()));
         entity.setDocumentIdsJson(toJson(profile.getDocumentIds()));
         entity.setWeeklyScheduleJson(profile.getWeeklyScheduleJson());
+        entity.setAvatarUrl(profile.getAvatarUrl());
 
         return toDomain(jpa.save(entity));
     }
@@ -58,6 +59,12 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
                 .stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<ProviderProfile> findTopByCompletedMissions(int limit) {
+        return jpa.findTop50ByOrderByCompletedMissionsDesc()
+                .stream().limit(limit).map(this::toDomain).toList();
+    }
+
     // ─── Mappers ──────────────────────────────────────────────────
 
     private ProviderProfile toDomain(ProviderProfileJpaEntity e) {
@@ -65,7 +72,8 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
             var ctor = ProviderProfile.class.getDeclaredConstructor(
                     UUID.class, UUID.class, String.class, double.class, int.class,
                     boolean.class, double.class, String.class, double.class,
-                    boolean.class, List.class, List.class, double.class, String.class
+                    boolean.class, List.class, List.class, double.class, String.class,
+                    String.class  // avatarUrl
             );
             ctor.setAccessible(true);
             return ctor.newInstance(
@@ -77,7 +85,8 @@ public class ProviderProfileRepositoryAdapter implements ProviderProfileReposito
                     fromJson(e.getCertificationsJson()),
                     fromJson(e.getDocumentIdsJson()),
                     e.getMonthlyEarnings(),
-                    e.getWeeklyScheduleJson()
+                    e.getWeeklyScheduleJson(),
+                    e.getAvatarUrl()
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution ProviderProfile", ex);

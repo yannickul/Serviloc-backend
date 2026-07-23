@@ -45,6 +45,16 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+internal:
+  token: ${INTERNAL_TOKEN}
+
+websocket:
+  stomp-relay:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 61613
+    client-login: ${RABBITMQ_DEFAULT_USER:admin}
+    client-passcode: ${RABBITMQ_DEFAULT_PASS}
+
 logging:
   level:
     com.serviloc: DEBUG

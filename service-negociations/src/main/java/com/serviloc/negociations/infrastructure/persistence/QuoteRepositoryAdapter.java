@@ -30,7 +30,8 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
                 .orElse(new QuoteJpaEntity(
                         q.getId(), q.getConversationId(), q.getDemandId(),
                         q.getProviderId(), q.getAmount(), q.getDescription(),
-                        q.getEstimatedDurationHours(), q.getStatus(), q.getExpiresAt()
+                        q.getEstimatedDurationHours(), q.getValidityDays(),
+                        q.getStatus(), q.getExpiresAt()
                 ));
         entity.setStatus(q.getStatus());
         entity.setMaterialsJson(toJson(q.getMaterials()));
@@ -48,6 +49,16 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
     }
 
     @Override
+    public Optional<Quote> findByDemandIdAndProviderId(UUID demandId, UUID providerId) {
+        return jpa.findByDemandIdAndProviderId(demandId, providerId).map(this::toDomain);
+    }
+
+    @Override
+    public List<Quote> findAllByDemandId(UUID demandId) {
+        return jpa.findAllByDemandId(demandId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<Quote> findExpiredPending() {
         return jpa.findExpiredByStatus(QuoteStatus.EN_ATTENTE, LocalDateTime.now())
                 .stream().map(this::toDomain).toList();
@@ -57,7 +68,7 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
         try {
             var ctor = Quote.class.getDeclaredConstructor(
                     UUID.class, UUID.class, UUID.class, UUID.class,
-                    double.class, String.class, List.class, int.class,
+                    double.class, String.class, List.class, int.class, int.class,
                     QuoteStatus.class, LocalDateTime.class,
                     LocalDateTime.class, LocalDateTime.class
             );
@@ -66,7 +77,8 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
                     e.getId(), e.getConversationId(), e.getDemandId(),
                     e.getProviderId(), e.getAmount(), e.getDescription(),
                     fromJson(e.getMaterialsJson()), e.getEstimatedDurationHours(),
-                    e.getStatus(), e.getCreatedAt(), e.getExpiresAt(), e.getUpdatedAt()
+                    e.getValidityDays(), e.getStatus(), e.getCreatedAt(),
+                    e.getExpiresAt(), e.getUpdatedAt()
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution Quote", ex);

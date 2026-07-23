@@ -64,6 +64,11 @@ public class ConversationRepositoryAdapter implements ConversationRepository {
         return jpa.findByDemandId(demandId).map(this::toDomain);
     }
 
+    @Override
+    public Optional<Conversation> findByDemandIdAndProviderId(UUID demandId, UUID providerId) {
+        return jpa.findByDemandIdAndProviderId(demandId, providerId).map(this::toDomain);
+    }
+
     private Conversation toDomain(ConversationJpaEntity e) {
         try {
             var ctor = Conversation.class.getDeclaredConstructor(

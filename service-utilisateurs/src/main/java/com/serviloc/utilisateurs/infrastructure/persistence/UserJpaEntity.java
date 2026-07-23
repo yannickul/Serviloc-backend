@@ -49,6 +49,9 @@ public class UserJpaEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
@@ -74,10 +77,18 @@ public class UserJpaEntity {
     public String getLastName()           { return lastName; }
     public String getEmail()              { return email; }
     public String getPassword()           { return password; }
+    public void setPassword(String password) { this.password = password; }
     public String getPhone()              { return phone; }
     public UserRole getRole()             { return role; }
     public User.Status getStatus()        { return status; }
     public void setStatus(User.Status s)  { this.status = s; }
     public LocalDateTime getCreatedAt()   { return createdAt; }
     public LocalDateTime getUpdatedAt()   { return updatedAt; }
+
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setLastName(String lastName)   { this.lastName = lastName; }
+    public void setPhone(String phone)         { this.phone = phone; }
+
+    public String getAvatarUrl()          { return avatarUrl; }
+    public void setAvatarUrl(String url)  { this.avatarUrl = url; }
 }

@@ -6,7 +6,9 @@ import java.util.UUID;
 public class Transaction {
 
     private final UUID id;
+    private final String reference;
     private final UUID demandId;
+    private UUID missionId;
     private final UUID clientId;
     private final UUID providerId;
     private final UUID quoteId;
@@ -29,22 +31,29 @@ public class Transaction {
 
         double commissionAmount = amount * commissionRate / 100;
         double netAmount = amount - commissionAmount;
+        UUID id = UUID.randomUUID();
 
         return new Transaction(
-                UUID.randomUUID(), demandId, clientId, providerId, quoteId,
+                id, generateReference(id), demandId, null, clientId, providerId, quoteId,
                 amount, commissionRate, commissionAmount, netAmount,
                 TransactionStatus.PENDING, paymentMethod, phoneNumber, null,
                 LocalDateTime.now(), LocalDateTime.now()
         );
     }
 
-    private Transaction(UUID id, UUID demandId, UUID clientId, UUID providerId,
+    public static String generateReference(UUID id) {
+        return "TXN-" + id.toString().substring(0, 8).toUpperCase();
+    }
+
+    public Transaction(UUID id, String reference, UUID demandId, UUID missionId, UUID clientId, UUID providerId,
                         UUID quoteId, double amount, double commissionRate,
                         double commissionAmount, double netAmount,
                         TransactionStatus status, String paymentMethod,
                         String phoneNumber, String externalRef,
                         LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id; this.demandId = demandId; this.clientId = clientId;
+        this.id = id;
+        this.reference = reference != null ? reference : generateReference(id);
+        this.demandId = demandId; this.missionId = missionId; this.clientId = clientId;
         this.providerId = providerId; this.quoteId = quoteId;
         this.amount = amount; this.commissionRate = commissionRate;
         this.commissionAmount = commissionAmount; this.netAmount = netAmount;
@@ -85,9 +94,16 @@ public class Transaction {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void assignMission(UUID missionId) {
+        this.missionId = missionId;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     // ─── Getters ──────────────────────────────────────────────────
     public UUID getId()                  { return id; }
+    public String getReference()         { return reference; }
     public UUID getDemandId()            { return demandId; }
+    public UUID getMissionId()           { return missionId; }
     public UUID getClientId()            { return clientId; }
     public UUID getProviderId()          { return providerId; }
     public UUID getQuoteId()             { return quoteId; }

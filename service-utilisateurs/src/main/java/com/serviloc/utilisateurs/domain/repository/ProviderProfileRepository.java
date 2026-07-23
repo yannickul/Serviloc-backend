@@ -11,4 +11,5 @@ public interface ProviderProfileRepository {
     List<ProviderProfile> findAvailableInZone(double lat, double lng,
                                               double radiusKm, String specialty,
                                               double minRating, double maxRate);
+    List<ProviderProfile> findTopByCompletedMissions(int limit);
 }

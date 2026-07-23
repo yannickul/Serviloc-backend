@@ -8,6 +8,9 @@ public final class ProviderProfileDtos {
     // ─── PATCH /provider/profile ──────────────────────────────────
 
     public record UpdateProfileRequest(
+            String firstName,
+            String lastName,
+            String phone,
             String specialty,
             @Min(0) double hourlyRate,
             String serviceZoneCity,
@@ -16,9 +19,9 @@ public final class ProviderProfileDtos {
             @Min(1) @Max(100) double radiusKm,
             boolean estCertifie,
             List<String> certifications,
-            List<String> documentIds
+            List<String> documentIds,
+            String avatarUrl
     ) {}
-
     // ─── PATCH /provider/availability ─────────────────────────────
 
     public record UpdateAvailabilityRequest(

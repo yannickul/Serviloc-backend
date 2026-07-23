@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -45,6 +46,18 @@ public class AdminPaymentController {
                 transactions,
                 new PageMeta(page, limit, result.getTotalElements(), result.getTotalPages())
         )));
+    }
+
+    // ─── GET /admin/stats ──────────────────────────────────────────
+
+    @GetMapping("/admin/stats")
+    @Operation(summary = "Commissions + paiements pour le dashboard admin (noms résolus)")
+    public ResponseEntity<ApiResponse<PaymentService.AdminStats>> getAdminStats(
+            @RequestParam(defaultValue = "2026-01-01T00:00:00") String from,
+            @RequestParam(defaultValue = "2099-12-31T23:59:59") String to) {
+        LocalDateTime fromDate = LocalDateTime.parse(from, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        LocalDateTime toDate   = LocalDateTime.parse(to,   DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        return ResponseEntity.ok(ApiResponse.ok(paymentService.getAdminStats(fromDate, toDate)));
     }
 
     // ─── PATCH /admin/settings/commission ────────────────────────
@@ -83,8 +96,10 @@ public class AdminPaymentController {
 
     private InternalPaymentController.TransactionResponse toResponse(Transaction t) {
         return new InternalPaymentController.TransactionResponse(
-                "txn_" + t.getId().toString().replace("-", "").substring(0, 8),
+                t.getId().toString(),
+                t.getReference(),
                 t.getDemandId().toString(),
+                t.getMissionId() != null ? t.getMissionId().toString() : null,
                 t.getClientId().toString(),
                 t.getProviderId().toString(),
                 t.getAmount(),

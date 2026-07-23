@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Repository
 public interface TransactionJpaRepository
@@ -19,6 +20,8 @@ public interface TransactionJpaRepository
     Optional<TransactionJpaEntity> findByQuoteId(UUID quoteId);
     Optional<TransactionJpaEntity> findByDemandId(UUID demandId);
     Page<TransactionJpaEntity> findByStatus(TransactionStatus status, Pageable pageable);
+    List<TransactionJpaEntity> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+    List<TransactionJpaEntity> findByClientIdAndStatus(UUID clientId, TransactionStatus status);
     long countByStatus(TransactionStatus status);
 
     @Query("""
@@ -39,6 +42,35 @@ public interface TransactionJpaRepository
         AND t.createdAt BETWEEN :from AND :to
         """)
     double sumCommissionBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.amount), 0) FROM TransactionJpaEntity t
+    WHERE t.clientId = :clientId AND t.status = :status
+    """)
+    double sumAmountByClientIdAndStatus(
+            @Param("clientId") UUID clientId,
+            @Param("status") TransactionStatus status
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.commissionAmount), 0) FROM TransactionJpaEntity t
+    WHERE t.status = 'LIBERE'
+    AND t.createdAt BETWEEN :from AND :to
+    """)
+    double sumCommissionAmountBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    @Query("""
+    SELECT COALESCE(SUM(t.amount), 0) FROM TransactionJpaEntity t
+    WHERE t.status = 'SEQUESTRE'
+    AND t.createdAt BETWEEN :from AND :to
+    """)
+    double sumSequesteredAmountBetween(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to
     );

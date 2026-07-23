@@ -5,6 +5,11 @@ spring:
   application:
     name: service-utilisateurs
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5441/${POSTGRES_USER_DB}
     username: ${POSTGRES_USER_USER}
@@ -47,6 +52,12 @@ management:
       exposure:
         include: "health,info"
 
+internal:
+  token: ${INTERNAL_TOKEN}
+
 logging:
+  #pattern:
+    #console: "%d{HH:mm:ss.SSS} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"
   level:
     com.serviloc: DEBUG
+   #org.springframework.amqp: INFO

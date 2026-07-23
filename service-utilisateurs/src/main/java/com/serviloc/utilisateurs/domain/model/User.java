@@ -17,6 +17,7 @@ public class User {
     private Status status;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String avatarUrl;
 
 
     public static User create(String firstName, String lastName,
@@ -79,6 +80,35 @@ public class User {
         return firstName != null && !firstName.isBlank()
                 ? String.valueOf(firstName.charAt(0)).toUpperCase()
                 : "?";
+    }
+
+    public void changePassword(String newEncodedPassword) {
+        if (newEncodedPassword == null || newEncodedPassword.isBlank())
+            throw new IllegalArgumentException("Mot de passe obligatoire");
+        this.password = newEncodedPassword;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setFirstName(String firstName) {
+        if (firstName != null && !firstName.isBlank())
+            this.firstName = firstName;
+    }
+
+    public void setLastName(String lastName) {
+        if (lastName != null && !lastName.isBlank())
+            this.lastName = lastName;
+    }
+
+    public void setPhone(String phone) {
+        if (phone != null && !phone.isBlank())
+            this.phone = phone;
+    }
+
+    public String getAvatarUrl() { return avatarUrl; }
+
+    public void setAvatarUrl(String avatarUrl) {
+        if (avatarUrl != null && !avatarUrl.isBlank())
+            this.avatarUrl = avatarUrl;
     }
 
     public boolean isActive() {

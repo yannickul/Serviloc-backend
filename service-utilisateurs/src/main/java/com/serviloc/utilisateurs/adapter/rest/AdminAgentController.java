@@ -42,6 +42,24 @@ public class AdminAgentController {
             @RequestParam(defaultValue = "20") int limit) {
         return ResponseEntity.ok(ApiResponse.ok(adminAgentService.getAgents(page, limit)));
     }
+    // ─── PATCH /admin/agents/:id/suspend ──────────────────────────
+
+    @PatchMapping("/{id}/suspend")
+    @Operation(summary = "Suspendre un agent")
+    public ResponseEntity<ApiResponse<SuspendResponse>> suspendAgent(
+            @PathVariable UUID id,
+            @Valid @RequestBody SuspendUserRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(adminAgentService.suspendAgent(id, request)));
+    }
+
+// ─── DELETE /admin/agents/:id ──────────────────────────────────
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Supprimer définitivement un agent")
+    public ResponseEntity<ApiResponse<AgentDeletedResponse>> deleteAgent(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(adminAgentService.deleteAgent(id)));
+    }
 
     // ─── GET /admin/agents/:id ────────────────────────────────────
 

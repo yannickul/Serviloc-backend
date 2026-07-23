@@ -8,6 +8,8 @@ import com.serviloc.utilisateurs.domain.exception.UserNotFoundException;
 import com.serviloc.utilisateurs.domain.model.User;
 import com.serviloc.utilisateurs.domain.model.UserRole;
 import com.serviloc.utilisateurs.domain.repository.ProviderProfileRepository;
+import com.serviloc.utilisateurs.domain.repository.ProviderReviewRepository;
+import com.serviloc.utilisateurs.domain.model.ProviderReview;
 import com.serviloc.utilisateurs.domain.repository.UserRepository;
 import com.serviloc.utilisateurs.infrastructure.messaging.UserEventPublisher;
 import com.serviloc.utilisateurs.infrastructure.persistence.UserJpaRepository;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,19 +29,24 @@ import java.util.UUID;
 public class AdminUserService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminUserService.class);
+    private static final DateTimeFormatter REVIEW_DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'+01:00'");
 
     private final UserRepository userRepository;
     private final UserJpaRepository userJpaRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final ProviderReviewRepository providerReviewRepository;
     private final UserEventPublisher eventPublisher;
 
     public AdminUserService(UserRepository userRepository,
                             UserJpaRepository userJpaRepository,
                             ProviderProfileRepository providerProfileRepository,
+                            ProviderReviewRepository providerReviewRepository,
                             UserEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.userJpaRepository = userJpaRepository;
         this.providerProfileRepository = providerProfileRepository;
+        this.providerReviewRepository = providerReviewRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -77,13 +85,13 @@ public class AdminUserService {
 
         eventPublisher.publishUserSuspended(userId, user.getEmail());
 
-        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={}",
-                userId, request.duration());
+        String duration = request.durationOrDefault();
+        log.info("[ADMIN] Utilisateur suspendu : userId={} duration={}", userId, duration);
 
         return new SuspendResponse(
-                "usr_" + userId.toString().replace("-", "").substring(0, 8),
+                userId.toString(),
                 "suspended",
-                request.duration(),
+                duration,
                 request.reason()
         );
     }
@@ -137,9 +145,31 @@ public class AdminUserService {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
+        com.serviloc.utilisateurs.application.dto.ProfileDtos.AgentReview agentReview =
+                buildAgentReview(providerId);
+
         return providerProfileRepository.findByUserId(providerId)
-                .map(profile -> UserResponseMapper.toProviderProfile(user, profile))
+                .map(profile -> UserResponseMapper.toAdminProviderProfile(user, profile, agentReview))
                 .orElse(UserResponseMapper.toProviderProfile(user));
+    }
+
+    // ─── agentReview (dossier prestataire — comble la divergence front constatée) ──
+
+    private com.serviloc.utilisateurs.application.dto.ProfileDtos.AgentReview buildAgentReview(UUID providerId) {
+        return providerReviewRepository.findLatestByProviderId(providerId)
+                .map(review -> {
+                    String agentName = userRepository.findById(review.getAgentId())
+                            .map(User::getFullName)
+                            .orElse("Agent inconnu");
+
+                    return new com.serviloc.utilisateurs.application.dto.ProfileDtos.AgentReview(
+                            agentName,
+                            review.getVerdict().name().toLowerCase(),
+                            review.getComment(),
+                            review.getReviewedAt().format(REVIEW_DATE_FORMATTER)
+                    );
+                })
+                .orElse(null);
     }
 
     // ─── POST /admin/providers/:id/validate ───────────────────────
@@ -153,7 +183,7 @@ public class AdminUserService {
         log.info("[ADMIN] Prestataire validé : userId={}", providerId);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "validated",
                 "Dossier validé. Le prestataire a été notifié."
         );
@@ -166,12 +196,12 @@ public class AdminUserService {
         User user = userRepository.findById(providerId)
                 .orElseThrow(() -> new UserNotFoundException("Prestataire introuvable"));
 
-        eventPublisher.publishProviderRejected(providerId, request.reason());
+        eventPublisher.publishProviderRejected(providerId, request.reason(), user.getEmail());
 
         log.info("[ADMIN] Prestataire rejeté : userId={}", providerId);
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "rejected",
                 "Dossier rejeté. Le prestataire a été notifié."
         );
@@ -187,7 +217,7 @@ public class AdminUserService {
         eventPublisher.publishProviderNotified(providerId, user.getEmail(), request.message());
 
         return new ProviderActionResponse(
-                "usr_" + providerId.toString().replace("-", "").substring(0, 8),
+                providerId.toString(),
                 "notified",
                 "Notification envoyée au prestataire."
         );

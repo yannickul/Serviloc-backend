@@ -1,0 +1,25 @@
+package com.serviloc.mission.application.port.in;
+
+import com.serviloc.mission.application.dto.request.AcceptQuoteRequest;
+import com.serviloc.mission.application.dto.request.CreateLitigeRequest;
+import com.serviloc.mission.application.dto.request.CreateStepsRequest;
+import com.serviloc.mission.application.dto.request.RateMissionRequest;
+import com.serviloc.mission.application.dto.response.*;
+
+import java.util.List;
+
+public interface MissionUseCase {
+    MissionResponse getMissionById(String id, String userId, String role);
+    List<MissionResponse> getMissionsByProvider(String providerId, String status);
+    PagedResponse<MissionResponse> getMissionsByClient(String clientId, String status, int page, int limit);
+    StartMissionResponse startMission(String missionId, String providerId);
+    CompleteMissionResponse completeMission(String missionId, String providerId);
+    ValidateMissionResponse validateMission(String missionId, String clientId);
+    void updateStep(String missionId, String stepId, String providerId);
+    RatingResponse rateAsClient(String missionId, String clientId, RateMissionRequest request);
+    RatingResponse rateAsProvider(String missionId, String providerId, RateMissionRequest request);
+    void declareLitigeAsClient(String missionId, String clientId, CreateLitigeRequest request);
+    void declareLitigeAsProvider(String missionId, String providerId, CreateLitigeRequest request);
+    DefineStepsResponse defineSteps(String missionId, String providerId, CreateStepsRequest request);
+    void updateProviderLocation(String missionId, String providerId, com.serviloc.mission.application.dto.request.LocationDto location);
+}

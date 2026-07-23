@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 @Component
 public class TransactionRepositoryAdapter implements TransactionRepository {
@@ -24,13 +25,15 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     public Transaction save(Transaction t) {
         TransactionJpaEntity entity = jpa.findById(t.getId())
                 .orElse(new TransactionJpaEntity(
-                        t.getId(), t.getDemandId(), t.getClientId(), t.getProviderId(),
+                        t.getId(), t.getReference(), t.getDemandId(), t.getMissionId(),
+                        t.getClientId(), t.getProviderId(),
                         t.getQuoteId(), t.getAmount(), t.getCommissionRate(),
                         t.getCommissionAmount(), t.getNetAmount(),
                         t.getStatus(), t.getPaymentMethod(), t.getPhoneNumber()
                 ));
         entity.setStatus(t.getStatus());
         entity.setExternalRef(t.getExternalRef());
+        entity.setMissionId(t.getMissionId());
         return toDomain(jpa.save(entity));
     }
 
@@ -55,6 +58,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
+    public List<Transaction> findAllByCreatedAtBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.findAllByCreatedAtBetween(from, to).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public double sumAmountByProviderIdAndCreatedAtBetween(UUID providerId,
                                                            LocalDateTime from,
                                                            LocalDateTime to) {
@@ -71,24 +79,34 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         return jpa.countByStatus(status);
     }
 
+    @Override
+    public List<Transaction> findByClientIdAndStatus(UUID clientId, TransactionStatus status) {
+        return jpa.findByClientIdAndStatus(clientId, status)
+                .stream().map(this::toDomain).toList();
+    }
+
     private Transaction toDomain(TransactionJpaEntity e) {
-        try {
-            var ctor = Transaction.class.getDeclaredConstructor(
-                    UUID.class, UUID.class, UUID.class, UUID.class, UUID.class,
-                    double.class, double.class, double.class, double.class,
-                    TransactionStatus.class, String.class, String.class, String.class,
-                    LocalDateTime.class, LocalDateTime.class
-            );
-            ctor.setAccessible(true);
-            return ctor.newInstance(
-                    e.getId(), e.getDemandId(), e.getClientId(), e.getProviderId(),
-                    e.getQuoteId(), e.getAmount(), e.getCommissionRate(),
-                    e.getCommissionAmount(), e.getNetAmount(), e.getStatus(),
-                    e.getPaymentMethod(), e.getPhoneNumber(), e.getExternalRef(),
-                    e.getCreatedAt(), e.getUpdatedAt()
-            );
-        } catch (Exception ex) {
-            throw new RuntimeException("Erreur reconstitution Transaction", ex);
-        }
+        return new Transaction(
+                e.getId(), e.getReference(), e.getDemandId(), e.getMissionId(),
+                e.getClientId(), e.getProviderId(),
+                e.getQuoteId(), e.getAmount(), e.getCommissionRate(),
+                e.getCommissionAmount(), e.getNetAmount(), e.getStatus(),
+                e.getPaymentMethod(), e.getPhoneNumber(), e.getExternalRef(),
+                e.getCreatedAt(), e.getUpdatedAt()
+        );
+    }
+
+    @Override
+    public double sumAmountByClientIdAndStatus(UUID clientId, TransactionStatus status) {
+        return jpa.sumAmountByClientIdAndStatus(clientId, status);
+    }
+    @Override
+    public double sumCommissionAmountBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.sumCommissionAmountBetween(from, to);
+    }
+
+    @Override
+    public double sumSequesteredAmountBetween(LocalDateTime from, LocalDateTime to) {
+        return jpa.sumSequesteredAmountBetween(from, to);
     }
 }

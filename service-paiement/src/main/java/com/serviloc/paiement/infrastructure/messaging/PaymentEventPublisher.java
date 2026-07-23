@@ -6,6 +6,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,13 +51,24 @@ public class PaymentEventPublisher {
 
     // ─── payment.released ─────────────────────────────────────────
 
-    public void publishPaymentReleased(UUID transactionId, UUID providerId,
+    public void publishPaymentReleased(UUID transactionId, UUID missionId, UUID providerId,
                                        double netAmount, double commissionAmount) {
-        publish("payment.released", Map.of(
-                "transactionId",    transactionId.toString(),
-                "providerId",       providerId.toString(),
-                "netAmount",        netAmount,
-                "commissionAmount", commissionAmount
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("transactionId",    transactionId.toString());
+        payload.put("missionId",        missionId != null ? missionId.toString() : null);
+        payload.put("providerId",       providerId.toString());
+        payload.put("netAmount",        netAmount);
+        payload.put("commissionAmount", commissionAmount);
+        publish("payment.released", payload);
+    }
+
+    // ─── payment.refunded ─────────────────────────────────────────
+
+    public void publishPaymentRefunded(UUID transactionId, UUID clientId, double amount) {
+        publish("payment.refunded", Map.of(
+                "transactionId", transactionId.toString(),
+                "clientId",      clientId.toString(),
+                "amount",        amount
         ));
     }
 

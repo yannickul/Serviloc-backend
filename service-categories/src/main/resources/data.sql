@@ -1,15 +1,23 @@
--- Catégories par défaut avec slug
-TRUNCATE TABLE categories RESTART IDENTITY CASCADE;
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_plomberie', 'Plomberie', 'WRENCH', 'Réparation de fuites, installation sanitaire, dépannage plomberie', '#dbeafe', 5000, 50000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_plomberie');
 
-INSERT INTO categories (slug, label, icon_key, color, demand_count, percentage_share)
-VALUES ('transport', 'Transport', 'car', 'blue', 10, 15.5);
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_electricite', 'Électricité', 'BOLT', 'Installation électrique, dépannage, mise aux normes', '#fef9c3', 5000, 60000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_electricite');
 
-INSERT INTO categories (slug, label, icon_key, color, demand_count, percentage_share)
-VALUES ('logement', 'Logement', 'home', 'red', 25, 40.0);
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_menage', 'Ménage', 'BROOM', 'Nettoyage de domicile, entretien courant, grand ménage', '#f3e8ff', 3000, 25000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_menage');
 
-INSERT INTO categories (slug, label, icon_key, color, demand_count, percentage_share)
-VALUES ('sante', 'Santé', 'hospital', 'green', 5, 8.0);
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_serrurerie', 'Serrurerie', 'KEY', 'Ouverture de porte, remplacement de serrures, dépannage urgence', '#e0e7ff', 5000, 40000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_serrurerie');
 
-INSERT INTO categories (slug, label, icon_key, color, demand_count, percentage_share)
-VALUES ('education', 'Éducation', 'book', 'yellow', 12, 20.0);
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_peinture', 'Peinture', 'BRUSH', 'Peinture intérieure et extérieure, rénovation de façades', '#ffe4e6', 10000, 100000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_peinture');
 
+INSERT INTO service_categories (id, label, icon_key, description, color, budget_min, budget_max, demand_count, created_at, updated_at)
+SELECT 'cat_jardinage', 'Jardinage', 'LEAF', 'Entretien de jardins, tonte, taille de haies, plantations', '#d1fae5', 3000, 30000, 0, now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM service_categories WHERE id = 'cat_jardinage');

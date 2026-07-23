@@ -17,9 +17,15 @@ public final class AdminDtos {
 
     public record SuspendUserRequest(
             @NotBlank String reason,
-            @NotBlank @Pattern(regexp = "24h|7d|indefinite",
+            @Pattern(regexp = "24h|7d|indefinite",
                     message = "Durée : 24h, 7d ou indefinite") String duration
-    ) {}
+    ) {
+        // Fix demande front : duration est désormais optionnel (le front n'envoie
+        // que { reason }). "indefinite" est appliqué par défaut côté service.
+        public String durationOrDefault() {
+            return duration != null && !duration.isBlank() ? duration : "indefinite";
+        }
+    }
 
     public record RejectProviderRequest(
             @NotBlank String reason
@@ -86,5 +92,10 @@ public final class AdminDtos {
             String comment,
             String reviewedAt,
             String message
+    ) {}
+
+    public record AgentDeletedResponse(
+            String agentId,
+            boolean deleted
     ) {}
 }

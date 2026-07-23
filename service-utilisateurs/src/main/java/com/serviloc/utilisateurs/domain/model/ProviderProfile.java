@@ -21,6 +21,7 @@ public class ProviderProfile {
     private double monthlyEarnings;
     private Double latitude;
     private Double longitude;
+    private String avatarUrl;
 
 
     // Horaires hebdomadaires (JSON sérialisé en base)
@@ -31,7 +32,7 @@ public class ProviderProfile {
                 UUID.randomUUID(), userId,
                 null, 0.0, 0, false,
                 0.0, null, 10.0, false,
-                List.of(), List.of(), 0.0, null
+                List.of(), List.of(), 0.0, null, null
         );
     }
 
@@ -41,7 +42,7 @@ public class ProviderProfile {
                             String serviceZoneCity, double radiusKm,
                             boolean estCertifie, List<String> certifications,
                             List<String> documentIds, double monthlyEarnings,
-                            String weeklyScheduleJson) {
+                            String weeklyScheduleJson, String avatarUrl) {
         this.id = id;
         this.userId = userId;
         this.specialty = specialty;
@@ -56,23 +57,26 @@ public class ProviderProfile {
         this.documentIds = documentIds;
         this.monthlyEarnings = monthlyEarnings;
         this.weeklyScheduleJson = weeklyScheduleJson;
+        this.avatarUrl = avatarUrl;
     }
 
     // ─── Business methods ─────────────────────────────────────────
 
     public void updateProfile(String specialty, double hourlyRate,
-                              String serviceZoneCity, Double latitude, Double longitude, double radiusKm,
+                              String serviceZoneCity, double latitude,
+                              double longitude, double radiusKm,
                               boolean estCertifie, List<String> certifications,
-                              List<String> documentIds) {
+                              List<String> documentIds, String avatarUrl) {
         if (specialty != null && !specialty.isBlank()) this.specialty = specialty;
         if (hourlyRate > 0)    this.hourlyRate = hourlyRate;
         if (serviceZoneCity != null && !serviceZoneCity.isBlank()) this.serviceZoneCity = serviceZoneCity;
+        if (latitude != 0)     this.latitude = latitude;
+        if (longitude != 0)    this.longitude = longitude;
         if (radiusKm > 0)      this.radiusKm = radiusKm;
         this.estCertifie = estCertifie;
         if (certifications != null) this.certifications = certifications;
         if (documentIds != null)    this.documentIds = documentIds;
-        if (latitude != 0) this.latitude = latitude;
-        if (longitude != 0) this.longitude = longitude;
+        if (avatarUrl != null && !avatarUrl.isBlank()) this.avatarUrl = avatarUrl;
     }
 
     public void updateAvailability(boolean isAvailable) {
@@ -108,4 +112,5 @@ public class ProviderProfile {
     public String getWeeklyScheduleJson() { return weeklyScheduleJson; }
     public Double getLatitude()  { return latitude; }
     public Double getLongitude() { return longitude; }
+    public String getAvatarUrl() { return avatarUrl; }
 }

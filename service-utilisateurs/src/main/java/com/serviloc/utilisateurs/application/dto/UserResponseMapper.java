@@ -3,7 +3,8 @@ package com.serviloc.utilisateurs.application.dto;
 import com.serviloc.utilisateurs.domain.model.User;
 
 import java.time.format.DateTimeFormatter;
-
+import com.serviloc.utilisateurs.application.service.ProfileEnrichmentService;
+import java.util.List;
 /**
  * Convertit les entités domaine en DTOs de réponse conformes au contrat API v2.0.
  */
@@ -35,12 +36,18 @@ public final class UserResponseMapper {
         );
     }
 
-    // ─── Client profile ───────────────────────────────────────────
+    // ─── InternalUserResponse (GET /internal/users/{id}) ───────────
 
-    public static ProfileDtos.ClientProfileResponse toClientProfile(User user) {
-        return new ProfileDtos.ClientProfileResponse(
+    public static ProfileDtos.InternalUserResponse toInternalUserResponse(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile providerProfile) {
+
+        Double rating = providerProfile != null ? providerProfile.getRating() : null;
+        String specialty = providerProfile != null ? providerProfile.getSpecialty() : null;
+
+        return new ProfileDtos.InternalUserResponse(
                 UserIdFormatter.formatUserId(user.getId()),
-                "client",
+                user.getRole().name().toLowerCase(),
                 user.getFirstName(),
                 user.getLastName(),
                 user.getFullName(),
@@ -48,10 +55,29 @@ public final class UserResponseMapper {
                 user.getEmail(),
                 user.getAvatarInitial(),
                 user.getStatus().name().toLowerCase(),
-                0.0,        // totalSpent — sera alimenté par Service Paiement en S3
-                0,          // completedMissions — sera alimenté par Service Missions en S3
-                null,       // pendingPayment — stub S1
-                null,       // location — stub S1
+                rating,
+                specialty,
+                formatDate(user)
+        );
+    }
+
+    // ─── Client profile ───────────────────────────────────────────
+
+    public static ProfileDtos.ClientProfileResponse toClientProfile(User user) {
+        return new ProfileDtos.ClientProfileResponse(
+                user.getId().toString(),
+                "client",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                0.0, 0,
+                java.util.List.of(),
+                null,
                 formatDate(user)
         );
     }
@@ -60,7 +86,7 @@ public final class UserResponseMapper {
 
     public static ProfileDtos.ProviderProfileResponse toProviderProfile(User user) {
         return new ProfileDtos.ProviderProfileResponse(
-                UserIdFormatter.formatUserId(user.getId()),
+                user.getId().toString(),
                 "provider",
                 user.getFirstName(),
                 user.getLastName(),
@@ -68,30 +94,34 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                null,       // avatarUrl
                 user.getStatus().name().toLowerCase(),
-                null,       // specialty — ProviderProfile JPA en S2
-                0.0,        // rating
-                0,          // completedMissions
-                false,      // isAvailable
-                0.0,        // hourlyRate
-                null,       // serviceZone
+                null, 0.0, 0, false, 0.0, null,
                 ProfileDtos.WeeklyAvailability.defaultSchedule(),
-                0.0,        // monthlyEarnings
+                0.0,
                 java.util.List.of(),
-                false,      // estCertifie
+                false,
+                java.util.List.of(),
+                null,        // agentReview
                 formatDate(user)
         );
     }
 
     public static ProfileDtos.ProviderProfileResponse toProviderProfile(
-            User user, com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
 
         ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
                 ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
                 : null;
 
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
         return new ProfileDtos.ProviderProfileResponse(
-                UserIdFormatter.formatUserId(user.getId()),
+                user.getId().toString(),
                 "provider",
                 user.getFirstName(),
                 user.getLastName(),
@@ -99,6 +129,7 @@ public final class UserResponseMapper {
                 user.getPhone(),
                 user.getEmail(),
                 user.getAvatarInitial(),
+                profile.getAvatarUrl(),
                 user.getStatus().name().toLowerCase(),
                 profile.getSpecialty(),
                 profile.getRating(),
@@ -110,6 +141,51 @@ public final class UserResponseMapper {
                 profile.getMonthlyEarnings(),
                 profile.getCertifications(),
                 profile.isEstCertifie(),
+                documents,
+                null,        // agentReview — voir toAdminProviderProfile pour la version enrichie
+                formatDate(user)
+        );
+    }
+
+    // ─── AdminProviderProfile enrichi avec l'avis de l'agent instructeur ──
+
+    public static ProfileDtos.ProviderProfileResponse toAdminProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile,
+            ProfileDtos.AgentReview agentReview) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
+        return new ProfileDtos.ProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                profile.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getCompletedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                profile.getMonthlyEarnings(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                documents,
+                agentReview,
                 formatDate(user)
         );
     }
@@ -136,6 +212,151 @@ public final class UserResponseMapper {
                 formatDate(user)
         );
     }
+    // ─── ClientProfile enrichi ────────────────────────────────────
+
+    public static ProfileDtos.ClientProfileResponse toClientProfile(
+            User user,
+            ProfileEnrichmentService.ClientEnrichment enrichment) {
+
+        List<ProfileDtos.PendingPayment> pendingPayments = enrichment.pendingPayments()
+                .stream()
+                .map(p -> new ProfileDtos.PendingPayment(p.amount(), p.missionLabel()))
+                .toList();
+
+        return new ProfileDtos.ClientProfileResponse(
+                user.getId().toString(),
+                "client",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                enrichment.totalSpent(),
+                enrichment.completedMissions(),
+                pendingPayments,
+                null,
+                formatDate(user)
+        );
+    }
+
+// ─── ProviderProfile enrichi ──────────────────────────────────
+
+    public static ProfileDtos.ProviderProfileResponse toProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile,
+            ProfileEnrichmentService.ProviderEnrichment enrichment) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        List<ProfileDtos.ProviderDocument> documents = profile.getDocumentIds().stream()
+                .map(docId -> new ProfileDtos.ProviderDocument(
+                        docId, null, null, null, "valide", null))
+                .toList();
+
+        return new ProfileDtos.ProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                profile.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                enrichment.completedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                enrichment.monthlyEarnings(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                documents,
+                null,        // agentReview — non pertinent pour la vue du prestataire lui-même
+                formatDate(user)
+        );
+    }
+
+    // ─── PublicProviderProfile (GET /user/{id}) ────────────────────
+
+    public static ProfileDtos.PublicProviderProfileResponse toPublicProviderProfile(
+            User user,
+            com.serviloc.utilisateurs.domain.model.ProviderProfile profile) {
+
+        ProfileDtos.ServiceZone serviceZone = profile.getServiceZoneCity() != null
+                ? new ProfileDtos.ServiceZone(profile.getServiceZoneCity(), profile.getRadiusKm())
+                : null;
+
+        return new ProfileDtos.PublicProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                profile.getSpecialty(),
+                profile.getRating(),
+                profile.getCompletedMissions(),
+                profile.isAvailable(),
+                profile.getHourlyRate(),
+                serviceZone,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                profile.getCertifications(),
+                profile.isEstCertifie(),
+                formatDate(user)
+        );
+    }
+
+    public static ProfileDtos.PublicProviderProfileResponse toPublicProviderProfile(User user) {
+        return new ProfileDtos.PublicProviderProfileResponse(
+                user.getId().toString(),
+                "provider",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getStatus().name().toLowerCase(),
+                null, 0.0, 0, false, 0.0, null,
+                ProfileDtos.WeeklyAvailability.defaultSchedule(),
+                java.util.List.of(),
+                false,
+                formatDate(user)
+        );
+    }
+
+    // ─── PublicClientProfile ──────────────────────────────────────
+
+    public static ProfileDtos.PublicClientProfileResponse toPublicClientProfile(User user) {
+        return new ProfileDtos.PublicClientProfileResponse(
+                user.getId().toString(),
+                "client",
+                user.getFirstName(),
+                user.getLastName(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getEmail(),
+                user.getAvatarInitial(),
+                user.getAvatarUrl(),
+                user.getStatus().name().toLowerCase(),
+                0,
+                null,
+                formatDate(user)
+        );
+    }
+
 
 
     // ─── Helper ───────────────────────────────────────────────────

@@ -44,15 +44,20 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
             }
             final String finalCorrelationId = correlationId;
 
-            // ─── Extraction du token ──────────────────────────────
+            // ─── Extraction du token : header Authorization, sinon ?token= (WebSocket) ──
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            String token;
 
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
+            } else {
+                token = request.getQueryParams().getFirst("token");
+            }
+
+            if (token == null || token.isBlank()) {
                 log.warn("[Gateway] Token absent → {}", request.getURI().getPath());
                 return unauthorized(exchange, "Token d'authentification manquant");
             }
-
-            String token = authHeader.substring(7);
 
             // ─── Validation JWT ───────────────────────────────────
             try {

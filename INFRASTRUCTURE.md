@@ -13,7 +13,7 @@ Ce guide permet à chaque membre de l’équipe de lancer l’environnement de d
 ```bash
 git clone <url-du-repo>
 cd Serviloc-backend
-cp .env.example .env
+cp .env .env
 ```
 Éditez le fichier .env pour définir des mots de passe sécurisés (au minimum RABBITMQ_DEFAULT_PASS, REDIS_PASSWORD, MINIO_ROOT_PASSWORD).
 

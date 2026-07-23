@@ -73,6 +73,9 @@ public class ProviderProfileJpaEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     protected ProviderProfileJpaEntity() {}
 
     public ProviderProfileJpaEntity(UUID id, UUID userId) {
@@ -112,4 +115,6 @@ public class ProviderProfileJpaEntity {
     public double getMonthlyEarnings()           { return monthlyEarnings; }
     public void setMonthlyEarnings(double m)     { this.monthlyEarnings = m; }
     public LocalDateTime getUpdatedAt()          { return updatedAt; }
+    public String getAvatarUrl()            { return avatarUrl; }
+    public void setAvatarUrl(String url)    { this.avatarUrl = url; }
 }

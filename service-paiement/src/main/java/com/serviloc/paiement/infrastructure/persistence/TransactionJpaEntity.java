@@ -13,6 +13,7 @@ import java.util.UUID;
 @Table(name = "transactions",
         indexes = {
                 @Index(name = "idx_txn_demand_id",   columnList = "demand_id"),
+                @Index(name = "idx_txn_mission_id",  columnList = "mission_id"),
                 @Index(name = "idx_txn_client_id",   columnList = "client_id"),
                 @Index(name = "idx_txn_provider_id", columnList = "provider_id"),
                 @Index(name = "idx_txn_status",      columnList = "status"),
@@ -22,7 +23,9 @@ import java.util.UUID;
 public class TransactionJpaEntity {
 
     @Id @Column(columnDefinition = "uuid") private UUID id;
+    @Column(name = "reference", length = 40) private String reference;
     @Column(name = "demand_id",   nullable = false, columnDefinition = "uuid") private UUID demandId;
+    @Column(name = "mission_id",  columnDefinition = "uuid") private UUID missionId;
     @Column(name = "client_id",   nullable = false, columnDefinition = "uuid") private UUID clientId;
     @Column(name = "provider_id", nullable = false, columnDefinition = "uuid") private UUID providerId;
     @Column(name = "quote_id",    nullable = false, columnDefinition = "uuid") private UUID quoteId;
@@ -42,12 +45,14 @@ public class TransactionJpaEntity {
 
     protected TransactionJpaEntity() {}
 
-    public TransactionJpaEntity(UUID id, UUID demandId, UUID clientId, UUID providerId,
+    public TransactionJpaEntity(UUID id, String reference, UUID demandId, UUID missionId,
+                                UUID clientId, UUID providerId,
                                 UUID quoteId, double amount, double commissionRate,
                                 double commissionAmount, double netAmount,
                                 TransactionStatus status, String paymentMethod,
                                 String phoneNumber) {
-        this.id = id; this.demandId = demandId; this.clientId = clientId;
+        this.id = id; this.reference = reference; this.demandId = demandId; this.missionId = missionId;
+        this.clientId = clientId;
         this.providerId = providerId; this.quoteId = quoteId;
         this.amount = amount; this.commissionRate = commissionRate;
         this.commissionAmount = commissionAmount; this.netAmount = netAmount;
@@ -56,7 +61,10 @@ public class TransactionJpaEntity {
     }
 
     public UUID getId()                   { return id; }
+    public String getReference()          { return reference; }
     public UUID getDemandId()             { return demandId; }
+    public UUID getMissionId()            { return missionId; }
+    public void setMissionId(UUID m)      { this.missionId = m; }
     public UUID getClientId()             { return clientId; }
     public UUID getProviderId()           { return providerId; }
     public UUID getQuoteId()              { return quoteId; }

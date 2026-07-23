@@ -33,6 +33,15 @@ public final class ProfileDtos {
             boolean available
     ) {}
 
+    public record ProviderDocument(
+            String id,
+            String type,
+            String label,
+            String reference,
+            String status,
+            String fileUrl
+    ) {}
+
     // ─── WeeklyAvailability ───────────────────────────────────────
 
     public record WeeklyAvailability(
@@ -58,8 +67,32 @@ public final class ProfileDtos {
     // ─── ClientProfileResponse ────────────────────────────────────
 
     public record ClientProfileResponse(
-            String id,              // usr_abc123
-            String role,            // "client"
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String avatarUrl,
+            String status,
+            double totalSpent,
+            int completedMissions,
+            List<PendingPayment> pendingPayments,
+            Location location,
+            String createdAt
+    ) {}
+
+    // ─── InternalUserResponse (GET /internal/users/{id}) ───────────
+    // Découplé de AuthDtos.UserResponse : cet endpoint est interne
+    // (inter-services) et ne doit pas partager son contrat avec les
+    // réponses publiques /auth/login, /auth/refresh, etc. rating/specialty
+    // sont null pour un client, renseignés pour un prestataire.
+
+    public record InternalUserResponse(
+            String id,
+            String role,
             String firstName,
             String lastName,
             String fullName,
@@ -67,24 +100,57 @@ public final class ProfileDtos {
             String email,
             String avatarInitial,
             String status,
-            double totalSpent,
-            int completedMissions,
-            PendingPayment pendingPayment,   // null si aucun
-            Location location,               // null si non renseigné
+            Double rating,
+            String specialty,
             String createdAt
+    ) {}
+
+    // ─── ProviderLookupResponse (GET /internal/providers/:providerId) ──
+    // Demandé par Service Missions : lookup par id précis (pas de filtre
+    // géo). avatarInitial exposé directement (cf. échange sur la question
+    // annexe) pour éviter toute divergence de logique de calcul entre services.
+
+    public record ProviderLookupResponse(
+            String id,
+            String fullName,
+            String avatarInitial,
+            String specialty,
+            double rating,
+            double hourlyRate,
+            int completedMissions,
+            boolean isAvailable
+    ) {}
+
+    // ─── TopProviderResponse (GET /internal/providers/top) ─────────
+
+    public record TopProviderResponse(
+            String id,
+            String fullName,
+            int completedMissions,
+            double rating
+    ) {}
+
+    // ─── AgentReview (enrichissement dossier prestataire, cf. divergence front) ───
+
+    public record AgentReview(
+            String agentName,
+            String verdict,
+            String comment,
+            String reviewedAt
     ) {}
 
     // ─── ProviderProfileResponse ──────────────────────────────────
 
     public record ProviderProfileResponse(
-            String id,              // usr_jcm456
-            String role,            // "provider"
+            String id,
+            String role,
             String firstName,
             String lastName,
             String fullName,
             String phone,
             String email,
             String avatarInitial,
+            String avatarUrl,
             String status,
             String specialty,
             double rating,
@@ -96,6 +162,8 @@ public final class ProfileDtos {
             double monthlyEarnings,
             List<String> certifications,
             boolean estCertifie,
+            List<ProviderDocument> documents,
+            AgentReview agentReview,
             String createdAt
     ) {}
 
@@ -130,5 +198,47 @@ public final class ProfileDtos {
             double hourlyRate,
             ServiceZone serviceZone,
             boolean isAvailable
+    ) {}
+
+    // ─── PublicProviderProfileResponse (GET /user/{id}) ────────────
+    // Même contenu que ProviderProfileResponse, sans les champs privés
+    // (monthlyEarnings, documents) qui n'ont pas à être exposés publiquement.
+
+    public record PublicProviderProfileResponse(
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String status,
+            String specialty,
+            double rating,
+            int completedMissions,
+            boolean isAvailable,
+            double hourlyRate,
+            ServiceZone serviceZone,
+            WeeklyAvailability availability,
+            List<String> certifications,
+            boolean estCertifie,
+            String createdAt
+    ) {}
+
+    public record PublicClientProfileResponse(
+            String id,
+            String role,
+            String firstName,
+            String lastName,
+            String fullName,
+            String phone,
+            String email,
+            String avatarInitial,
+            String avatarUrl,
+            String status,
+            int completedMissions,
+            Location location,
+            String createdAt
     ) {}
 }

@@ -13,4 +13,7 @@ public interface MessageJpaRepository
 
     Page<MessageJpaEntity> findByConversationIdOrderBySentAtDesc(
             UUID conversationId, Pageable pageable);
+
+    java.util.Optional<MessageJpaEntity> findFirstByConversationIdOrderBySentAtDesc(
+            UUID conversationId);
 }

@@ -16,6 +16,10 @@ public interface QuoteJpaRepository
 
     Optional<QuoteJpaEntity> findByDemandId(UUID demandId);
 
+    Optional<QuoteJpaEntity> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
+
+    List<QuoteJpaEntity> findAllByDemandId(UUID demandId);
+
     @Query("SELECT q FROM QuoteJpaEntity q WHERE q.status = :status AND q.expiresAt < :now")
     List<QuoteJpaEntity> findExpiredByStatus(QuoteStatus status, LocalDateTime now);
 }

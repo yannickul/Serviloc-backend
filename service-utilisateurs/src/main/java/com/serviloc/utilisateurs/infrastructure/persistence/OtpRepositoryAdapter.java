@@ -20,7 +20,8 @@ public class OtpRepositoryAdapter implements OtpRepository {
     @Override
     public OtpCode save(OtpCode otp) {
         OtpCodeJpaEntity entity = new OtpCodeJpaEntity(
-                otp.getId(), otp.getUserId(), otp.getCode(), otp.getExpiresAt()
+                otp.getId(), otp.getUserId(), otp.getCode(),
+                otp.getPurpose(), otp.getExpiresAt()
         );
         entity.setAttempts(otp.getAttempts());
         entity.setUsed(otp.isUsed());
@@ -34,21 +35,34 @@ public class OtpRepositoryAdapter implements OtpRepository {
     }
 
     @Override
+    public Optional<OtpCode> findLatestByUserIdAndPurpose(UUID userId, OtpCode.Purpose purpose) {
+        return jpa.findLatestByUserIdAndPurpose(userId, purpose).map(this::toDomain);
+    }
+
+    @Override
     @Transactional
     public void deleteByUserId(UUID userId) {
         jpa.deleteByUserId(userId);
     }
 
+    @Override
+    @Transactional
+    public void deleteByUserIdAndPurpose(UUID userId, OtpCode.Purpose purpose) {
+        jpa.deleteByUserIdAndPurpose(userId, purpose);
+    }
+
     private OtpCode toDomain(OtpCodeJpaEntity e) {
         try {
             var ctor = OtpCode.class.getDeclaredConstructor(
-                    UUID.class, UUID.class, String.class,
-                    java.time.LocalDateTime.class, int.class, boolean.class
+                    UUID.class, UUID.class, String.class, OtpCode.Purpose.class,
+                    int.class, boolean.class,
+                    java.time.LocalDateTime.class, java.time.LocalDateTime.class
             );
             ctor.setAccessible(true);
             return ctor.newInstance(
-                    e.getId(), e.getUserId(), e.getCode(),
-                    e.getExpiresAt(), e.getAttempts(), e.isUsed()
+                    e.getId(), e.getUserId(), e.getCode(), e.getPurpose(),
+                    e.getAttempts(), e.isUsed(), e.getExpiresAt(),
+                    java.time.LocalDateTime.now() // createdAt non stocké en base actuellement
             );
         } catch (Exception ex) {
             throw new RuntimeException("Erreur reconstitution OtpCode", ex);

@@ -1,0 +1,70 @@
+# Docker Compose du service-fichiers en développement isolé.
+# À fusionner avec le docker-compose.yaml global du projet (services eureka-server,
+# gateway, rabbitmq, etc. — voir section 6.3 de ARCHITECTURE_MICROSERVICES_SERVILOC.md).
+
+services:
+  db-media:
+    image: postgres:17
+    container_name: db-media
+    ports:
+      - "5448:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-db_media}
+    volumes:
+      - db_media_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console web
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  service-fichiers:
+    build: .
+    container_name: service-fichiers
+    ports:
+      - "8088:8088"
+    environment:
+      DB_HOST: db-media
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-db_media}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+      EUREKA_URL: ${EUREKA_URL:-http://eureka-server:8761/eureka/}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: serviloc-media
+      MINIO_PUBLIC_URL: http://localhost:9000/serviloc-media
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-changeme-internal-token}
+    depends_on:
+      db-media:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  db_media_data:
+  minio_data:
