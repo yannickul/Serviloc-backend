@@ -458,9 +458,13 @@ services:
       DB_NOTIFS_URL: jdbc:postgresql://db-notifications:5432/${POSTGRES_NOTIFS_DB}
       POSTGRES_NOTIFS_USER: ${POSTGRES_NOTIFS_USER}
       POSTGRES_NOTIFS_PASSWORD: ${POSTGRES_NOTIFS_PASSWORD}
+      JPA_DDL_AUTO: update
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
     depends_on:
       eureka-server: { condition: service_healthy }
