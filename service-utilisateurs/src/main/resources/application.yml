@@ -1,14 +1,19 @@
 server:
-  port: 8083
+  port: 8081
 
 spring:
   application:
-    name: service-negociations
+    name: service-utilisateurs
+
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
   datasource:
-    url: ${DB_NEGO_URL:jdbc:postgresql://localhost:5443/${POSTGRES_NEGO_DB:db_negociations}}
-    username: ${POSTGRES_NEGO_USER:svc_negociations}
-    password: ${POSTGRES_NEGO_PASSWORD}
+    url: ${DB_UTILISATEURS_URL:jdbc:postgresql://localhost:5441/${POSTGRES_USER_DB}}
+    username: ${POSTGRES_USER_USER}
+    password: ${POSTGRES_USER_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 5
@@ -27,9 +32,9 @@ spring:
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
-    username: ${RABBITMQ_DEFAULT_USER:admin}
+    username: ${RABBITMQ_DEFAULT_USER}
     password: ${RABBITMQ_DEFAULT_PASS}
-    virtual-host: ${RABBITMQ_VHOST:/}
+    virtual-host: ${RABBITMQ_VHOST}
 
 eureka:
   client:
@@ -45,27 +50,24 @@ eureka:
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 3600000
+  refresh-token-expiration: 86400000
+  issuer: serviloc
+
 management:
   endpoints:
     web:
       exposure:
         include: "health,info"
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-
 internal:
   token: ${INTERNAL_TOKEN}
 
-websocket:
-  stomp-relay:
-    host: ${RABBITMQ_HOST:localhost}
-    port: 61613
-    client-login: ${RABBITMQ_DEFAULT_USER:admin}
-    client-passcode: ${RABBITMQ_DEFAULT_PASS}
-
 logging:
+  #pattern:
+  #console: "%d{HH:mm:ss.SSS} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"
   level:
     com.serviloc: DEBUG
-    org.springframework.amqp: INFO
+    #org.springframework.amqp: INFO

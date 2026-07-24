@@ -6,7 +6,7 @@ spring:
     name: service-missions
 
   datasource:
-    url: jdbc:postgresql://localhost:5442/${POSTGRES_MISSIONS_DB:db_missions}
+    url: ${DB_MISSIONS_URL:jdbc:postgresql://localhost:5442/${POSTGRES_MISSIONS_DB:db_missions}}
     username: ${POSTGRES_MISSIONS_USER}
     password: ${POSTGRES_MISSIONS_PASSWORD}
     driver-class-name: org.postgresql.Driver

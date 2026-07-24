@@ -6,7 +6,7 @@ spring:
     name: service-fichiers
 
   datasource:
-    url: jdbc:postgresql://localhost:5448/${POSTGRES_MEDIA_DB:db_media}
+    url: ${DB_MEDIA_URL:jdbc:postgresql://localhost:5448/${POSTGRES_MEDIA_DB:db_media}}
     username: ${POSTGRES_MEDIA_USER}
     password: ${POSTGRES_MEDIA_PASSWORD}
     driver-class-name: org.postgresql.Driver

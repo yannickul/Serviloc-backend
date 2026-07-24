@@ -6,7 +6,7 @@ spring:
     name: service-litiges
 
   datasource:
-    url: jdbc:postgresql://localhost:5445/${POSTGRES_LITIGES_DB:db_litiges}
+    url: ${DB_LITIGES_URL:jdbc:postgresql://localhost:5445/${POSTGRES_LITIGES_DB:db_litiges}}
     username: ${POSTGRES_LITIGES_USER}
     password: ${POSTGRES_LITIGES_PASSWORD}
     driver-class-name: org.postgresql.Driver

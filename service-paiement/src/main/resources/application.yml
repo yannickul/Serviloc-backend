@@ -12,7 +12,7 @@ spring:
     name: service-paiement
 
   datasource:
-    url: jdbc:postgresql://localhost:5444/${POSTGRES_PAIEMENT_DB:db_paiement}
+    url: ${DB_PAIEMENT_URL:jdbc:postgresql://localhost:5444/${POSTGRES_PAIEMENT_DB:db_paiement}}
     username: ${POSTGRES_PAIEMENT_USER:svc_paiement}
     password: ${POSTGRES_PAIEMENT_PASSWORD}
     driver-class-name: org.postgresql.Driver
