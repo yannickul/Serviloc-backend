@@ -6,15 +6,14 @@ spring:
     name: service-missions
 
   datasource:
-    url: ${DB_MISSIONS_URL:jdbc:postgresql://localhost:5442/${POSTGRES_MISSIONS_DB:db_missions}}
-    username: ${POSTGRES_MISSIONS_USER}
-    password: ${POSTGRES_MISSIONS_PASSWORD}
+    url: ${DB_MISSIONS_URL:jdbc:postgresql://localhost:5442/db_missions}
+    username: ${POSTGRES_USER_USER}
+    password: ${POSTGRES_USER_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 5
-      minimum-idle: 1
-      connection-timeout: 60000
-      initialization-fail-timeout: -1
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     hibernate:
@@ -27,7 +26,7 @@ spring:
     host: ${RABBITMQ_HOST:localhost}
     port: 5672
     username: ${RABBITMQ_DEFAULT_USER}
-    password: ${RABBITMQ_DEFAULT_PASS}
+    password: ${RABBITMQ_DEFAULT_PASSWORD}
     listener:
       simple:
         acknowledge-mode: manual   # ACK manuel pour contrôler l'idempotence
@@ -54,11 +53,9 @@ eureka:
       defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
     fetch-registry: true
     register-with-eureka: true
-    registry-fetch-interval-seconds: 10
   instance:
     prefer-ip-address: true
-    hostname: ${HOSTNAME}
-    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    instance-id: ${spring.application.name}:${server.port}
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
 

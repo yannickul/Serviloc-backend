@@ -48,6 +48,6 @@ public interface DemandUseCase {
     QuoteResponse getQuoteByIdForProvider(String quoteId, String providerId);
     QuoteResponse updateQuoteByIdForProvider(String quoteId, String providerId, UpdateQuoteRequest request);
 
-    List<ApplicationResponse> getApplicationsForDemand(String demandId, String clientId);
+    List<ApplicationResponse> getApplicationsForDemand(String demandId);
     QuoteDetailResponse getQuoteDetail(String quoteId);
 }

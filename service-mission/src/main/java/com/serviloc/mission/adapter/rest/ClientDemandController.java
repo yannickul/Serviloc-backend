@@ -12,7 +12,6 @@ import com.serviloc.mission.domain.model.DemandStatus;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.serviloc.mission.application.dto.response.ApplicationResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -97,12 +96,9 @@ public class ClientDemandController {
     }
 
     @GetMapping("/demands/{id}/applications")
-    public ResponseEntity<ApiResponse<List<ApplicationResponse>>> getApplications(
-            @PathVariable String id,
-            @RequestHeader("X-User-Id") String clientId) { // <-- AJOUT DU HEADER
+    public ResponseEntity<ApiResponse<List<com.serviloc.mission.application.dto.response.ApplicationResponse>>> getApplications(
+            @PathVariable String id) {
 
-        return ResponseEntity.ok(
-                ApiResponse.success(demandUseCase.getApplicationsForDemand(id, clientId))
-        );
+        return ResponseEntity.ok(ApiResponse.success(demandUseCase.getApplicationsForDemand(id)));
     }
 }

@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.serviloc.mission.application.dto.request.*;
 import com.serviloc.mission.application.dto.request.CreateQuoteRequest;
 import com.serviloc.mission.application.port.out.QuotePort;
+import com.serviloc.mission.domain.model.ProviderApplication;
+import com.serviloc.mission.domain.repository.ProviderApllicationRepository;
 import com.serviloc.mission.application.dto.response.*;
 import com.serviloc.mission.application.port.in.DemandUseCase;
 import com.serviloc.mission.domain.event.DemandPublishedEvent;
@@ -39,17 +41,20 @@ public class DemandService implements DemandUseCase {
     private final ObjectMapper objectMapper;
     private final QuotePort quotePort;
     private final UtilisateurClient utilisateurClient;
+    private final ProviderApllicationRepository providerApplicationRepository;
 
     public DemandService(
             DemandRepository demandRepository,
             MissionEventPublisher eventPublisher,
             CategorieClient categorieClient,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper, QuotePort quotePort, UtilisateurClient utilisateurClient) {
+            ObjectMapper objectMapper, QuotePort quotePort, UtilisateurClient utilisateurClient,
+            ProviderApllicationRepository providerApplicationRepository) {
         this.demandRepository = demandRepository;
         this.eventPublisher = eventPublisher;
         this.categorieClient = categorieClient;
         this.utilisateurClient = utilisateurClient;
+        this.providerApplicationRepository = providerApplicationRepository;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.quotePort = quotePort;
@@ -237,7 +242,21 @@ public class DemandService implements DemandUseCase {
         }
 
         // Plusieurs prestataires peuvent postuler à la même demande (devis en concurrence) :
-        // aucune exclusivité à vérifier ici.
+        // aucune exclusivité à vérifier ici. On persiste néanmoins la candidature — sans ça,
+        // GET /client/demands/:id/applications ne peut pas savoir qui a postulé tant qu'aucun
+        // devis n'a été soumis.
+        ProviderApplication application = providerApplicationRepository
+                .findByDemandIdAndProviderId(demandId, providerId)
+                .orElseGet(() -> {
+                    ProviderApplication a = new ProviderApplication();
+                    a.setId(java.util.UUID.randomUUID().toString());
+                    a.setDemandId(demandId);
+                    a.setProviderId(providerId);
+                    a.setStatus("PENDING");
+                    return a;
+                });
+        providerApplicationRepository.save(application);
+
         return new ApplyDemandResponse(demandId, "applied", "Vous pouvez maintenant créer votre devis.");
     }
 
@@ -373,38 +392,53 @@ public class DemandService implements DemandUseCase {
 
     @Transactional(readOnly = true)
     @Override
-    public List<ApplicationResponse> getApplicationsForDemand(String demandId, String clientId) {
-        // 1. Vérification de l'existence de la demande
-        Demand demand = demandRepository.findById(demandId)
+    public List<ApplicationResponse> getApplicationsForDemand(String demandId) {
+        demandRepository.findById(demandId)
                 .orElseThrow(() -> new DemandNotFoundException(demandId));
 
-        // 2. Contrôle d'accès : seul le propriétaire de la demande peut consulter les candidatures
-        if (!demand.getClientId().equals(clientId)) {
-            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
-        }
+        List<ProviderApplication> applications = providerApplicationRepository.findByDemandId(demandId);
 
-        // 3. Récupération des devis soumis pour cette demande
-        List<QuoteDto> quotes = quotePort.getQuotesByDemand(demandId);
+        return applications.stream()
+                .map(app -> {
+                    ProviderLookupResponse provider = fetchProviderSafely(app.getProviderId());
 
-        // 4. Mapping des devis en candidatures (ApplicationResponse)
-        return quotes.stream()
-                .map(q -> {
-                    ProviderLookupResponse provider = fetchProviderSafely(q.providerId());
+                    // Le devis n'a pas forcément encore été soumis au moment de la candidature.
+                    QuoteDto quote = null;
+                    try {
+                        quote = quotePort.getQuoteByDemandAndProvider(demandId, app.getProviderId());
+                    } catch (Exception e) {
+                        log.debug("Pas encore de devis pour demande={} provider={}", demandId, app.getProviderId());
+                    }
+
+                    String status = quote != null
+                            ? mapQuoteStatusToApplicationStatus(quote.status())
+                            : mapApplicationStatus(app.getStatus());
+
                     return new ApplicationResponse(
-                            q.id(),
+                            app.getId(),
                             demandId,
-                            q.providerId(),
+                            app.getProviderId(),
                             provider != null ? provider.fullName() : null,
                             provider != null ? provider.avatarInitial() : null,
                             provider != null ? provider.specialty() : null,
                             provider != null ? provider.rating() : 0,
                             provider != null ? provider.completedMissions() : 0,
                             provider != null ? provider.hourlyRate() : 0,
-                            q.totalAmount(),
-                            mapQuoteStatusToApplicationStatus(q.status()),
-                            q.createdAt());
+                            quote != null ? quote.totalAmount() : null,
+                            status,
+                            app.getAppliedAt() != null ? app.getAppliedAt().toString() : null);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /** "PENDING|SELECTED|REJECTED" (ProviderApplication) -> "en_attente|acceptee|refusee" (Application, frontend). */
+    private String mapApplicationStatus(String applicationStatus) {
+        if (applicationStatus == null) return "en_attente";
+        return switch (applicationStatus) {
+            case "SELECTED" -> "acceptee";
+            case "REJECTED" -> "refusee";
+            default -> "en_attente";
+        };
     }
 
     @Transactional(readOnly = true)
