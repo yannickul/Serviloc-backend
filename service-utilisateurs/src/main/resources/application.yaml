@@ -67,7 +67,7 @@ internal:
 
 logging:
   #pattern:
-  #console: "%d{HH:mm:ss.SSS} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"
+    #console: "%d{HH:mm:ss.SSS} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"
   level:
     com.serviloc: DEBUG
-    #org.springframework.amqp: INFO
+   #org.springframework.amqp: INFO

@@ -3,6 +3,8 @@ package com.serviloc.utilisateurs.adapter.rest;
 import com.serviloc.utilisateurs.domain.exception.EmailAlreadyExistsException;
 import com.serviloc.utilisateurs.domain.exception.InvalidOtpException;
 import com.serviloc.utilisateurs.domain.exception.UserNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // ─── Format d'erreur unifié ───────────────────────────────────
 
@@ -79,6 +83,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
+        log.error("[INTERNAL_ERROR] Exception non gérée : {}", ex.getMessage(), ex);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
                 "Une erreur interne est survenue", null);
     }
