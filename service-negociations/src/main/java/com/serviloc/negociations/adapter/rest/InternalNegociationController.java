@@ -30,9 +30,9 @@ public class InternalNegociationController {
 
     @GetMapping("/quotes")
     @Operation(summary = "Liste les devis d'une demande, ou le devis d'un prestataire précis " +
-                          "si providerId est fourni")
+            "si providerId est fourni")
     public ResponseEntity<?> getQuotesByDemand(
-            @RequestParam UUID demandId,
+            @RequestParam String demandId, // <-- Changé en String
             @RequestParam(required = false) UUID providerId) {
         if (providerId != null) {
             return ResponseEntity.ok(quoteService.getQuoteByDemandAndProvider(demandId, providerId));
@@ -83,7 +83,7 @@ public class InternalNegociationController {
     @GetMapping("/conversations/{demandId}")
     @Operation(summary = "Récupère une conversation par demandId")
     public ResponseEntity<ConversationInternalResponse> getConversationByDemandId(
-            @PathVariable UUID demandId) {
+            @PathVariable String demandId) { // <-- Changé en String
         return ResponseEntity.ok(
                 conversationService.getConversationByDemandId(demandId));
     }

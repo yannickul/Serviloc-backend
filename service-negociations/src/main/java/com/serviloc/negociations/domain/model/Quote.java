@@ -8,7 +8,7 @@ public class Quote {
 
     private final UUID id;
     private final UUID conversationId;
-    private final UUID demandId;
+    private final String demandId; // <-- Changé en String
     private final UUID providerId;
     private double amount;
     private String description;
@@ -20,7 +20,7 @@ public class Quote {
     private LocalDateTime expiresAt;
     private LocalDateTime updatedAt;
 
-    public static Quote create(UUID conversationId, UUID demandId,
+    public static Quote create(UUID conversationId, String demandId, // <-- Changé en String
                                UUID providerId, double amount,
                                String description, List<Material> materials,
                                int estimatedDurationHours, int validityDays) {
@@ -37,7 +37,7 @@ public class Quote {
         );
     }
 
-    private Quote(UUID id, UUID conversationId, UUID demandId, UUID providerId,
+    private Quote(UUID id, UUID conversationId, String demandId, UUID providerId, // <-- Changé en String
                   double amount, String description, List<Material> materials,
                   int estimatedDurationHours, int validityDays, QuoteStatus status,
                   LocalDateTime createdAt, LocalDateTime expiresAt,
@@ -59,7 +59,6 @@ public class Quote {
 
     // ─── Business methods ─────────────────────────────────────────
 
-    /** Modifie le contenu du devis en conservant id/conversationId/providerId/status/createdAt. */
     public void update(double amount, String description, List<Material> materials,
                        int estimatedDurationHours, int validityDays) {
         if (amount <= 0)
@@ -104,7 +103,7 @@ public class Quote {
     // ─── Getters ──────────────────────────────────────────────────
     public UUID getId()                      { return id; }
     public UUID getConversationId()          { return conversationId; }
-    public UUID getDemandId()                { return demandId; }
+    public String getDemandId()              { return demandId; } // <-- Retourne String
     public UUID getProviderId()              { return providerId; }
     public double getAmount()                { return amount; }
     public String getDescription()           { return description; }

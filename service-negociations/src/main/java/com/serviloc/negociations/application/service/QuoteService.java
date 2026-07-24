@@ -41,7 +41,7 @@ public class QuoteService {
     // ─── POST /internal/quotes ────────────────────────────────────
 
     public QuoteResponse createQuote(CreateQuoteRequest request) {
-        UUID demandId   = UUID.fromString(request.demandId());
+        String demandId   = request.demandId();
         UUID providerId = UUID.fromString(request.providerId());
 
         // Résolution de la conversation via (demandId, providerId) — plusieurs prestataires
@@ -173,13 +173,13 @@ public class QuoteService {
 
     // ─── GET /internal/quotes?demandId=xxx[&providerId=yyy] ──────
 
-    public List<QuoteResponse> getQuotesByDemand(UUID demandId) {
+    public List<QuoteResponse> getQuotesByDemand(String demandId) {
         return quoteRepository.findAllByDemandId(demandId).stream()
                 .map(this::toQuoteResponse)
                 .toList();
     }
 
-    public QuoteResponse getQuoteByDemandAndProvider(UUID demandId, UUID providerId) {
+    public QuoteResponse getQuoteByDemandAndProvider(String demandId, UUID providerId) {
         Quote quote = quoteRepository.findByDemandIdAndProviderId(demandId, providerId)
                 .orElseThrow(() -> new QuoteNotFoundException(
                         "Aucun devis pour providerId=" + providerId
@@ -189,7 +189,7 @@ public class QuoteService {
 
     // ─── Consumer payment.failed → reset devis en EN_ATTENTE ─────
 
-    public void resetQuoteOnPaymentFailed(UUID demandId) {
+    public void resetQuoteOnPaymentFailed(String demandId) {
         quoteRepository.findAllByDemandId(demandId).stream()
                 .filter(q -> q.getStatus() == QuoteStatus.ACCEPTE)
                 .findFirst()

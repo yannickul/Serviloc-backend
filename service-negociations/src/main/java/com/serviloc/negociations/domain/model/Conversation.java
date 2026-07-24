@@ -8,7 +8,7 @@ public class Conversation {
     private final UUID id;
     private final UUID clientId;
     private final UUID providerId;
-    private final UUID demandId;
+    private final String demandId;
     private ConversationStatus status;
     private LocalDateTime lastMessageAt;
     private int unreadCountClient;
@@ -16,7 +16,7 @@ public class Conversation {
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static Conversation create(UUID clientId, UUID providerId, UUID demandId) {
+    public static Conversation create(UUID clientId, UUID providerId, String demandId) {
         return new Conversation(
                 UUID.randomUUID(), clientId, providerId, demandId,
                 ConversationStatus.ACTIVE, LocalDateTime.now(),
@@ -24,7 +24,7 @@ public class Conversation {
         );
     }
 
-    private Conversation(UUID id, UUID clientId, UUID providerId, UUID demandId,
+    private Conversation(UUID id, UUID clientId, UUID providerId, String demandId,
                          ConversationStatus status, LocalDateTime lastMessageAt,
                          int unreadCountClient, int unreadCountProvider,
                          LocalDateTime createdAt, LocalDateTime updatedAt) {
@@ -60,7 +60,7 @@ public class Conversation {
     public UUID getId()                    { return id; }
     public UUID getClientId()              { return clientId; }
     public UUID getProviderId()            { return providerId; }
-    public UUID getDemandId()              { return demandId; }
+    public String getDemandId()              { return demandId; }
     public ConversationStatus getStatus()  { return status; }
     public LocalDateTime getLastMessageAt(){ return lastMessageAt; }
     public int getUnreadCountClient()      { return unreadCountClient; }

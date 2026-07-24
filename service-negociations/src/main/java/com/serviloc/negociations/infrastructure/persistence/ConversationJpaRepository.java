@@ -13,7 +13,7 @@ public interface ConversationJpaRepository
         extends JpaRepository<ConversationJpaEntity, UUID> {
 
     Optional<ConversationJpaEntity> findByClientIdAndProviderIdAndDemandId(
-            UUID clientId, UUID providerId, UUID demandId);
+            UUID clientId, UUID providerId, String demandId);
 
     Page<ConversationJpaEntity> findByClientIdOrderByLastMessageAtDesc(
             UUID clientId, Pageable pageable);
@@ -21,7 +21,7 @@ public interface ConversationJpaRepository
     Page<ConversationJpaEntity> findByProviderIdOrderByLastMessageAtDesc(
             UUID providerId, Pageable pageable);
 
-    Optional<ConversationJpaEntity> findByDemandId(UUID demandId);
+    Optional<ConversationJpaEntity> findByDemandId(String demandId);
 
-    Optional<ConversationJpaEntity> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
+    Optional<ConversationJpaEntity> findByDemandIdAndProviderId(String demandId, UUID providerId);
 }

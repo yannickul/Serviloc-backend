@@ -11,9 +11,9 @@ public interface ConversationRepository {
     Conversation save(Conversation conversation);
     Optional<Conversation> findById(UUID id);
     Optional<Conversation> findByClientIdAndProviderIdAndDemandId(
-            UUID clientId, UUID providerId, UUID demandId);
+            UUID clientId, UUID providerId, String demandId);
     Page<Conversation> findByClientIdOrderByLastMessageAtDesc(UUID clientId, Pageable pageable);
     Page<Conversation> findByProviderIdOrderByLastMessageAtDesc(UUID providerId, Pageable pageable);
-    Optional<Conversation> findByDemandId(UUID demandId);
-    Optional<Conversation> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
+    Optional<Conversation> findByDemandId(String demandId);
+    Optional<Conversation> findByDemandIdAndProviderId(String demandId, UUID providerId);
 }

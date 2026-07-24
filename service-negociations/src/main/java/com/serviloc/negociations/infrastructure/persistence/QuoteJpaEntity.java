@@ -25,8 +25,8 @@ public class QuoteJpaEntity {
     @Column(name = "conversation_id", nullable = false, columnDefinition = "uuid")
     private UUID conversationId;
 
-    @Column(name = "demand_id", nullable = false, columnDefinition = "uuid")
-    private UUID demandId;
+    @Column(name = "demand_id", nullable = false) // <-- Retrait de columnDefinition = "uuid"
+    private String demandId; // <-- Changé en String
 
     @Column(name = "provider_id", nullable = false, columnDefinition = "uuid")
     private UUID providerId;
@@ -63,7 +63,7 @@ public class QuoteJpaEntity {
 
     protected QuoteJpaEntity() {}
 
-    public QuoteJpaEntity(UUID id, UUID conversationId, UUID demandId,
+    public QuoteJpaEntity(UUID id, UUID conversationId, String demandId, // <-- Changé en String
                           UUID providerId, double amount, String description,
                           int estimatedDurationHours, int validityDays, QuoteStatus status,
                           LocalDateTime expiresAt) {
@@ -81,7 +81,7 @@ public class QuoteJpaEntity {
 
     public UUID getId()                      { return id; }
     public UUID getConversationId()          { return conversationId; }
-    public UUID getDemandId()                { return demandId; }
+    public String getDemandId()              { return demandId; } // <-- Retourne String
     public UUID getProviderId()              { return providerId; }
     public double getAmount()                { return amount; }
     public String getDescription()           { return description; }

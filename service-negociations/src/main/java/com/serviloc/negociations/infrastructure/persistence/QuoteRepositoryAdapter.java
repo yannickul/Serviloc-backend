@@ -44,17 +44,17 @@ public class QuoteRepositoryAdapter implements QuoteRepository {
     }
 
     @Override
-    public Optional<Quote> findByDemandId(UUID demandId) {
+    public Optional<Quote> findByDemandId(String demandId) {
         return jpa.findByDemandId(demandId).map(this::toDomain);
     }
 
     @Override
-    public Optional<Quote> findByDemandIdAndProviderId(UUID demandId, UUID providerId) {
+    public Optional<Quote> findByDemandIdAndProviderId(String demandId, UUID providerId) {
         return jpa.findByDemandIdAndProviderId(demandId, providerId).map(this::toDomain);
     }
 
     @Override
-    public List<Quote> findAllByDemandId(UUID demandId) {
+    public List<Quote> findAllByDemandId(String demandId) {
         return jpa.findAllByDemandId(demandId).stream().map(this::toDomain).toList();
     }
 

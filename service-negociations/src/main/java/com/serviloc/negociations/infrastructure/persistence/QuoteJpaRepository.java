@@ -14,11 +14,11 @@ import java.util.UUID;
 public interface QuoteJpaRepository
         extends JpaRepository<QuoteJpaEntity, UUID> {
 
-    Optional<QuoteJpaEntity> findByDemandId(UUID demandId);
+    Optional<QuoteJpaEntity> findByDemandId(String demandId);
 
-    Optional<QuoteJpaEntity> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
+    Optional<QuoteJpaEntity> findByDemandIdAndProviderId(String demandId, UUID providerId);
 
-    List<QuoteJpaEntity> findAllByDemandId(UUID demandId);
+    List<QuoteJpaEntity> findAllByDemandId(String demandId);
 
     @Query("SELECT q FROM QuoteJpaEntity q WHERE q.status = :status AND q.expiresAt < :now")
     List<QuoteJpaEntity> findExpiredByStatus(QuoteStatus status, LocalDateTime now);

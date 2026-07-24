@@ -40,7 +40,7 @@ public class ConversationRepositoryAdapter implements ConversationRepository {
 
     @Override
     public Optional<Conversation> findByClientIdAndProviderIdAndDemandId(
-            UUID clientId, UUID providerId, UUID demandId) {
+            UUID clientId, UUID providerId, String demandId) {
         return jpa.findByClientIdAndProviderIdAndDemandId(
                 clientId, providerId, demandId).map(this::toDomain);
     }
@@ -60,12 +60,12 @@ public class ConversationRepositoryAdapter implements ConversationRepository {
     }
 
     @Override
-    public Optional<Conversation> findByDemandId(UUID demandId) {
+    public Optional<Conversation> findByDemandId(String demandId) {
         return jpa.findByDemandId(demandId).map(this::toDomain);
     }
 
     @Override
-    public Optional<Conversation> findByDemandIdAndProviderId(UUID demandId, UUID providerId) {
+    public Optional<Conversation> findByDemandIdAndProviderId(String demandId, UUID providerId) {
         return jpa.findByDemandIdAndProviderId(demandId, providerId).map(this::toDomain);
     }
 

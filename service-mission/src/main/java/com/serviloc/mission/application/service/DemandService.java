@@ -373,11 +373,20 @@ public class DemandService implements DemandUseCase {
 
     @Transactional(readOnly = true)
     @Override
-    public List<ApplicationResponse> getApplicationsForDemand(String demandId) {
-        demandRepository.findById(demandId)
+    public List<ApplicationResponse> getApplicationsForDemand(String demandId, String clientId) {
+        // 1. Vérification de l'existence de la demande
+        Demand demand = demandRepository.findById(demandId)
                 .orElseThrow(() -> new DemandNotFoundException(demandId));
 
+        // 2. Contrôle d'accès : seul le propriétaire de la demande peut consulter les candidatures
+        if (!demand.getClientId().equals(clientId)) {
+            throw new UnauthorizedMissionAccessException(clientId, demandId, "demande");
+        }
+
+        // 3. Récupération des devis soumis pour cette demande
         List<QuoteDto> quotes = quotePort.getQuotesByDemand(demandId);
+
+        // 4. Mapping des devis en candidatures (ApplicationResponse)
         return quotes.stream()
                 .map(q -> {
                     ProviderLookupResponse provider = fetchProviderSafely(q.providerId());

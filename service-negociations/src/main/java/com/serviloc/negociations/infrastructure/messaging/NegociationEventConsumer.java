@@ -41,7 +41,7 @@ public class NegociationEventConsumer {
 
             if ("payment.failed".equals(eventType)) {
                 Map<String, Object> payload = (Map<String, Object>) event.get("payload");
-                UUID demandId = UUID.fromString((String) payload.get("demandId"));
+                String demandId = (String) payload.get("demandId");
                 log.info("[NEGO-CONSUMER] payment.failed → reset devis : demandId={}", demandId);
                 quoteService.resetQuoteOnPaymentFailed(demandId);
             }

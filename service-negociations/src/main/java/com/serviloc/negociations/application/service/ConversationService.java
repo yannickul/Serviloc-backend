@@ -64,8 +64,8 @@ public class ConversationService {
     public ConversationResponse createConversation(UUID clientId,
                                                    CreateConversationRequest request) {
         UUID providerId = UUID.fromString(request.providerId());
-        UUID demandId   = request.demandId() != null
-                ? UUID.fromString(request.demandId())
+        String demandId   = request.demandId() != null
+                ? request.demandId()
                 : null;
 
         // Idempotence — retourne la conversation existante si elle existe
@@ -245,7 +245,7 @@ public class ConversationService {
     // ─── GET /internal/conversations/:demandId ────────────────────
 
     @Transactional(readOnly = true)
-    public ConversationInternalResponse getConversationByDemandId(UUID demandId) {
+    public ConversationInternalResponse getConversationByDemandId(String demandId) {
         Conversation conv = conversationRepository.findByDemandId(demandId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Conversation introuvable pour demandId : " + demandId));

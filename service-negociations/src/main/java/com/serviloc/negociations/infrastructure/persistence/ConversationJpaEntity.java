@@ -35,7 +35,7 @@ public class ConversationJpaEntity {
     private UUID providerId;
 
     @Column(name = "demand_id", columnDefinition = "uuid")
-    private UUID demandId;
+    private String demandId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -61,7 +61,7 @@ public class ConversationJpaEntity {
     protected ConversationJpaEntity() {}
 
     public ConversationJpaEntity(UUID id, UUID clientId, UUID providerId,
-                                 UUID demandId, ConversationStatus status) {
+                                 String demandId, ConversationStatus status) {
         this.id = id;
         this.clientId = clientId;
         this.providerId = providerId;
@@ -73,7 +73,7 @@ public class ConversationJpaEntity {
     public UUID getId()                      { return id; }
     public UUID getClientId()                { return clientId; }
     public UUID getProviderId()              { return providerId; }
-    public UUID getDemandId()                { return demandId; }
+    public String getDemandId()                { return demandId; }
     public ConversationStatus getStatus()    { return status; }
     public void setStatus(ConversationStatus s) { this.status = s; }
     public LocalDateTime getLastMessageAt()  { return lastMessageAt; }

@@ -9,8 +9,8 @@ import java.util.UUID;
 public interface QuoteRepository {
     Quote save(Quote quote);
     Optional<Quote> findById(UUID id);
-    Optional<Quote> findByDemandId(UUID demandId);
-    Optional<Quote> findByDemandIdAndProviderId(UUID demandId, UUID providerId);
-    List<Quote> findAllByDemandId(UUID demandId);
+    Optional<Quote> findByDemandId(String demandId);
+    Optional<Quote> findByDemandIdAndProviderId(String demandId, UUID providerId);
+    List<Quote> findAllByDemandId(String demandId);
     List<Quote> findExpiredPending();
 }
